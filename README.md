@@ -46,6 +46,8 @@ docs/adr/         Architectural decision records
 3. Install the project: `pip install -e .`.
 4. Install dev tooling: `pip install -r requirements-dev.txt`.
 5. Copy `.env.example` to `.env` and populate required backend secrets.
+   - Required: `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`.
+   - Optional overrides: `DATABASE_URL`, `OPENAI_MODEL`, `OPENAI_SYSTEM_PROMPT`.
 
 ### Frontend (React)
 1. Install Node.js 18.18+ and npm 9+.

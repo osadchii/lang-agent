@@ -1,2 +1,6 @@
 # Runtime dependencies for the Greek language learning bot.
 
+aiogram>=3.12,<4.0
+aiosqlite>=0.19,<0.20
+openai>=1.42,<2.0
+sqlalchemy[asyncio]>=2.0,<3.0

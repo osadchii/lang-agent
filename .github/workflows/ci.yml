@@ -42,12 +42,16 @@ jobs:
           cache-dependency-path: apps/frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --include=dev
         working-directory: apps/frontend
+        env:
+          NODE_ENV: development
 
       - name: Build frontend
         run: npm run build
         working-directory: apps/frontend
+        env:
+          NODE_ENV: development
 
   build:
     needs:

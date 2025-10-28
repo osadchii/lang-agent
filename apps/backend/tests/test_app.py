@@ -1,6 +1,6 @@
-"""Basic sanity tests for the bot application bootstrap."""
+"""Basic sanity tests for the backend application bootstrap."""
 
-from bot.app import BotApp, bootstrap
+from backend.application import BotApp, bootstrap
 
 
 def test_bootstrap_creates_bot_app(monkeypatch) -> None:

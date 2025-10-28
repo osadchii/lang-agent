@@ -1,0 +1,95 @@
+.card {
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.12);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.header h2 {
+  font-size: 1.1rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.status {
+  align-self: flex-start;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.75rem;
+  text-transform: uppercase;
+}
+
+.status[data-status="not-started"] {
+  background: rgba(94, 234, 212, 0.2);
+  color: #0f766e;
+}
+
+.status[data-status="in-progress"] {
+  background: rgba(251, 191, 36, 0.2);
+  color: #b45309;
+}
+
+.status[data-status="completed"] {
+  background: rgba(129, 140, 248, 0.2);
+  color: #4338ca;
+}
+
+.description {
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.progressBar {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 0.5rem;
+}
+
+.progress {
+  background: linear-gradient(135deg, #2f80ed, #56ccf2);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.primaryAction {
+  align-self: flex-start;
+  background: var(--accent-secondary);
+  border: none;
+  border-radius: 0.75rem;
+  color: #1e293b;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.primaryAction:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(56, 189, 248, 0.25);
+}
+
+.primaryAction:active {
+  transform: translateY(0);
+  box-shadow: none;
+}

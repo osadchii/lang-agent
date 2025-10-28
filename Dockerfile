@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     APP_HOME=/app \
-    PYTHONPATH=/app/src
+    PYTHONPATH=/app/apps/backend/src
 
 WORKDIR ${APP_HOME}
 
@@ -19,5 +19,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "-m", "bot.app"]
-
+CMD ["python", "-m", "backend.cli"]

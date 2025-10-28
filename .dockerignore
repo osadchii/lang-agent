@@ -8,4 +8,6 @@ __pycache__/
 .gitignore
 docs/
 tests/
-
+apps/frontend/node_modules/
+apps/frontend/dist/
+apps/frontend/.vite/

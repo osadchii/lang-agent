@@ -28,13 +28,44 @@ jobs:
       - name: Run tests
         run: pytest
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18.18"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: apps/frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: apps/frontend
+
   build:
-    needs: test
+    needs:
+      - test
+      - frontend
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            dockerfile: Dockerfile
+            image: ghcr.io/osadchii/lang-agent-backend
+          - name: frontend
+            dockerfile: Dockerfile.frontend
+            image: ghcr.io/osadchii/lang-agent-frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -52,15 +83,15 @@ jobs:
           username: osadchii
           password: ${{ secrets.REGISTRY_SECRET }}
 
-      - name: Build and push image
+      - name: Build and push ${{ matrix.name }} image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
+          file: ./${{ matrix.dockerfile }}
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/osadchii/lang-agent:latest
-            ghcr.io/osadchii/lang-agent:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ matrix.image }}:latest
+            ${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max

@@ -1,0 +1,93 @@
+.appShell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: var(--surface-background);
+  color: var(--text-primary);
+}
+
+.header {
+  backdrop-filter: blur(12px);
+  background: linear-gradient(135deg, rgba(47, 128, 237, 0.9), rgba(86, 204, 242, 0.9));
+  color: #ffffff;
+  padding: 1.75rem 1.5rem 1.25rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.headerContent {
+  margin: 0 auto;
+  max-width: 960px;
+}
+
+.headerContent h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.headerContent p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.main {
+  flex: 1;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 960px;
+  padding: 1rem 0 5.5rem;
+}
+
+.footer {
+  align-items: center;
+  background: #ffffff;
+  border-top: 1px solid var(--border-subtle);
+  bottom: 0;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  left: 0;
+  padding: 1rem 1.5rem;
+  position: sticky;
+}
+
+.footerCaption {
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.ctaButton {
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 999px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.65rem 1.5rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ctaButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(47, 128, 237, 0.25);
+}
+
+.ctaButton:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ctaButton {
+    width: 100%;
+  }
+}

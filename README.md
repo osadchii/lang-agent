@@ -41,6 +41,7 @@ AI-assisted tooling for learning Greek. This repository houses both the backend 
 ## Running Locally
 - Backend CLI: `python -m backend.cli` (or `make backend-dev`).
 - Entire stack via Docker: `docker compose up --pull always` (or `make stack-docker`) pulls published images and exposes the backend on `http://localhost:8000` plus the frontend on `http://localhost:4173`.
+- The provided `docker-compose.yml` includes optional Traefik labels and attaches both services to an external `web` network for the production deployment. If you are testing locally without Traefik, comment out the `labels:` block and the `networks:` declarations in that file before running `docker compose`.
 - Frontend dev server: in `apps/frontend/`, run `npm run dev` (or `make frontend-dev`).
 
 ### Makefile Shortcuts

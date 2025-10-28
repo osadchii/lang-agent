@@ -6,6 +6,8 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    networks:
+      - web
 
   frontend:
     image: ghcr.io/osadchii/lang-agent-frontend:latest
@@ -18,3 +20,9 @@ services:
       - "traefik.http.routers.lang-agent.entrypoints=websecure"
       - "traefik.http.routers.lang-agent.tls.certresolver=myresolver"
       - "traefik.http.services.lang-agent.loadbalancer.server.port=80"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

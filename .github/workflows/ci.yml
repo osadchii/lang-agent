@@ -119,9 +119,7 @@ jobs:
           username: ${{ secrets.RPI_USER }}
           key: ${{ secrets.RPI_SSH_KEY }}
           port: ${{ secrets.RPI_PORT }}
-          source: |
-            docker-compose.yml
-            .env.example
+          source: docker-compose.yml,.env.example
           target: /opt/lang-agent
 
       - name: Pull and restart services

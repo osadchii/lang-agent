@@ -129,14 +129,12 @@ jobs:
           username: ${{ secrets.RPI_USER }}
           key: ${{ secrets.RPI_SSH_KEY }}
           port: ${{ secrets.RPI_PORT }}
-          envs: REGISTRY_SECRET
-          envs_format: REGISTRY_SECRET=${{ secrets.REGISTRY_SECRET }}
           script: |
             set -e
             cd /opt/lang-agent
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
-            echo "${REGISTRY_SECRET}" | docker login ghcr.io -u osadchii --password-stdin
+            echo "${{ secrets.REGISTRY_SECRET }}" | docker login ghcr.io -u osadchii --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans

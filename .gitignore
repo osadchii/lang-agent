@@ -27,6 +27,8 @@ htmlcov/
 .vscode/
 *.swp
 *.swo
+bot.db
+bot.db-journal
 
 # Environment files
 .env

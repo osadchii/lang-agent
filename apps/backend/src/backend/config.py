@@ -5,6 +5,23 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+try:  # pragma: no cover - optional dependency fallback
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    load_dotenv = None
+
+_ENV_LOADED = False
+
+
+def _ensure_env_loaded() -> None:
+    """Load environment variables from a .env file when python-dotenv is available."""
+    global _ENV_LOADED
+    if _ENV_LOADED:
+        return
+    if load_dotenv is not None:
+        load_dotenv()
+    _ENV_LOADED = True
+
 
 @dataclass(frozen=True)
 class AppConfig:
@@ -21,6 +38,7 @@ class AppConfig:
     @classmethod
     def load(cls) -> "AppConfig":
         """Load configuration values from the environment."""
+        _ensure_env_loaded()
         from .resources.prompts import GREEK_TEACHER_PROMPT
 
         openai_api_key = os.getenv("OPENAI_API_KEY")

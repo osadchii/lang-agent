@@ -12,6 +12,7 @@ pip install -r requirements-dev.txt
 #   OPENAI_API_KEY=...
 #   TELEGRAM_BOT_TOKEN=...
 #   (optional) DATABASE_URL=sqlite+aiosqlite:///./bot.db
+# `.env` variables are loaded automatically via python-dotenv.
 # Run the CLI (alternatively: `make backend-dev` from repo root)
 python -m backend.cli
 ```

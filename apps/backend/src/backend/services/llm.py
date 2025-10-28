@@ -58,6 +58,24 @@ class OpenAIChatClient:
 
 def _extract_first_text(response: Response) -> str:
     """Fetch the first text segment produced by the Responses API."""
+    output_text = getattr(response, "output_text", None)
+    if output_text:
+        if isinstance(output_text, str) and output_text.strip():
+            return output_text
+        if isinstance(output_text, Iterable):
+            for chunk in output_text:
+                if isinstance(chunk, str) and chunk.strip():
+                    return chunk
+
+    text_field = getattr(response, "text", None)
+    if text_field:
+        if isinstance(text_field, str) and text_field.strip():
+            return text_field
+        if isinstance(text_field, Iterable):
+            for segment in text_field:
+                if isinstance(segment, str) and segment.strip():
+                    return segment
+
     for item in response.output or []:
         if item.type != "message":
             continue

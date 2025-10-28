@@ -21,6 +21,7 @@
 - Develop comprehensive automated tests for every utility, service, and module; aim for meaningful coverage rather than percentage targets.
 - Write unit and integration tests alongside new code; keep suites fast, deterministic, and execute them after every code change and before each commit.
 - Mock or stub external integrations in tests whenever feasible to maintain reliability, speed, and isolation.
+- Verify the application launches successfully both locally (`python -m bot.app`) and via Docker (`docker compose up`) after every change.
 - Collect meaningful logging and monitoring data with log levels, correlation IDs, and privacy safeguards to support debugging in production.
 
 ## Dependencies And Security

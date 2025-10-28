@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  bot:
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    command: python -m bot.app
+    ports:
+      - "8000:8000"
+

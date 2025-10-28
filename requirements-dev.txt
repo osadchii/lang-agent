@@ -1,0 +1,5 @@
+# Development dependencies extend the runtime requirements.
+-r requirements.txt
+
+pytest>=8.3
+

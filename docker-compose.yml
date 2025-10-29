@@ -3,11 +3,21 @@ services:
     image: ghcr.io/osadchii/lang-agent-backend:latest
     env_file:
       - .env
+    environment:
+      DB_DRIVER: ${DB_DRIVER:-postgresql+asyncpg}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-lang_agent}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "8000:8000"
     restart: unless-stopped
+    depends_on:
+      - postgres
     networks:
       - web
+      - backend
 
   frontend:
     image: ghcr.io/osadchii/lang-agent-frontend:latest
@@ -23,6 +33,25 @@ services:
     networks:
       - web
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lang_agent}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - backend
+
 networks:
   web:
     external: true
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:

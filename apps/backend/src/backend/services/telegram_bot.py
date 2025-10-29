@@ -6,7 +6,7 @@ import logging
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import Message
+from aiogram.types import ErrorEvent, Message
 
 from .conversation import ConversationService, UserMessagePayload
 
@@ -22,6 +22,7 @@ class TelegramBotRunner:
         self._conversation = conversation
 
         self._dispatcher.message.register(self._handle_text_message, F.text)
+        self._dispatcher.errors.register(self._handle_error)
 
     async def start(self) -> None:
         """Begin polling for Telegram updates."""
@@ -44,10 +45,10 @@ class TelegramBotRunner:
 
         try:
             reply = await self._conversation.handle_user_message(payload)
-        except Exception:  # pragma: no cover - defensive logging
+        except Exception as ex:  # pragma: no cover - defensive logging
             logger.exception("Failed to handle message %s", message.message_id)
             await self._safe_reply(message, "Произошла ошибка. Попробуйте ещё раз позже.")
-            return
+            raise
 
         await self._safe_reply(message, reply)
 
@@ -57,3 +58,16 @@ class TelegramBotRunner:
             await message.answer(text)
         except TelegramBadRequest:
             logger.exception("Failed to send reply for message %s", message.message_id)
+        except Exception:  # pragma: no cover - unexpected transport errors
+            logger.exception("Unexpected error while replying to message %s", message.message_id)
+
+    async def _handle_error(self, event: ErrorEvent) -> None:
+        """Log uncaught dispatcher errors and re-raise them for visibility."""
+        update_id = getattr(event.update, "update_id", "unknown")
+        logger.error(
+            "Dispatcher error for update %s: %s",
+            update_id,
+            event.exception,
+            exc_info=event.exception,
+        )
+        raise event.exception

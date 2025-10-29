@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..config import AppConfig
+from ..config import AppConfig as BackendAppConfig
+from ..logging import configure_logging
 from ..services.conversation import ConversationService
 from ..services.llm import OpenAIChatClient
 from ..services.storage.database import Database
@@ -15,7 +16,7 @@ from ..services.telegram_bot import TelegramBotRunner
 class BotApp:
     """Encapsulate bot lifecycle operations and service orchestration."""
 
-    config: AppConfig
+    config: BackendAppConfig
     database: Database
     telegram_bot: TelegramBotRunner
 
@@ -30,7 +31,8 @@ class BotApp:
 
 def bootstrap() -> BotApp:
     """Create an application instance backed by environment configuration."""
-    config = AppConfig.load()
+    config = BackendAppConfig.load()
+    configure_logging(config.log_level)
     database = Database(config.database_url)
     llm_client = OpenAIChatClient(
         api_key=config.openai_api_key,

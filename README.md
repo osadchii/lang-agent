@@ -41,14 +41,16 @@ docs/adr/         Architectural decision records
 ## Quick Start
 
 ### Backend (Python)
-1. Install Python 3.11+ and Docker.
+1. Install Python 3.11+, Docker, and provision PostgreSQL 16 (e.g., via `docker compose up postgres`).
 2. Create a virtualenv: `python -m venv .venv && source .venv/bin/activate`.
 3. Install the project: `pip install -e .`.
 4. Install dev tooling: `pip install -r requirements-dev.txt`.
 5. Copy `.env.example` to `.env` and populate required backend secrets.
    - Required: `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`.
-   - Optional overrides: `DATABASE_URL`, `OPENAI_MODEL`, `OPENAI_SYSTEM_PROMPT`.
+   - Database defaults (override as needed): `DB_DRIVER`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`. You can still set `DATABASE_URL` directly to bypass composition.
+   - Optional overrides: `OPENAI_MODEL`, `OPENAI_SYSTEM_PROMPT`.
    - The backend auto-loads `.env` via `python-dotenv`; no manual sourcing needed.
+6. Apply database migrations: `python -m backend.cli migrate`.
 
 ### Frontend (React)
 1. Install Node.js 18.18+ and npm 9+.
@@ -57,7 +59,8 @@ docs/adr/         Architectural decision records
 
 ## Running Locally
 - Backend CLI: `python -m backend.cli` (or `make backend-dev`).
-- Docker stack: `docker compose up --pull always` (or `make stack-docker`) exposes backend on `http://localhost:8000` and frontend on `http://localhost:4173`.
+- Run migrations without starting the bot: `python -m backend.cli migrate`.
+- Docker stack: `docker compose up --pull always` (or `make stack-docker`) exposes backend on `http://localhost:8000`, frontend on `http://localhost:4173`, and PostgreSQL on `localhost:5432`.
 - The provided `docker-compose.yml` includes Traefik labels and attaches both services to an external `web` network for production deployment. If you are testing locally without Traefik, comment out the `labels:` section and the `networks:` declarations before running `docker compose`.
 - Frontend dev server: `npm run dev` in `apps/frontend/` (or `make frontend-dev`).
 

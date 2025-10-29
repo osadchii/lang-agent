@@ -49,12 +49,20 @@ class MessageRepository:
         session: AsyncSession,
         *,
         user_id: int,
-        direction: MessageDirection,
+        direction: MessageDirection | str,
         content: str,
         model: Optional[str] = None,
     ) -> MessageRecord:
         """Persist a message tied to a user."""
-        record = MessageRecord(user_id=user_id, direction=direction, content=content, model=model)
+        direction_member = self._normalize_direction(direction)
+        normalized_model = model.strip() if isinstance(model, str) else model
+        model_value = normalized_model or "unknown"
+        record = MessageRecord(
+            user_id=user_id,
+            direction=direction_member,
+            content=content,
+            model=model_value,
+        )
         session.add(record)
         await session.flush()
         return record
@@ -78,3 +86,18 @@ class MessageRepository:
         records.reverse()
         return records
 
+    @staticmethod
+    def _normalize_direction(direction: MessageDirection | str) -> MessageDirection:
+        """Coerce arbitrary direction input into the enum value."""
+        if isinstance(direction, MessageDirection):
+            return direction
+        if isinstance(direction, str):
+            lowered = direction.lower()
+            try:
+                return MessageDirection(lowered)
+            except ValueError:
+                try:
+                    return MessageDirection[direction.upper()]
+                except KeyError as exc:  # pragma: no cover - defensive branch
+                    raise ValueError(f"Unsupported message direction: {direction}") from exc
+        raise TypeError(f"Unsupported message direction type: {type(direction)!r}")

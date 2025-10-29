@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import quote_plus
 from dataclasses import dataclass
 
 try:  # pragma: no cover - optional dependency fallback
@@ -56,6 +57,28 @@ class AppConfig:
             openai_api_key=openai_api_key,
             telegram_bot_token=telegram_bot_token,
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-            database_url=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bot.db"),
+            database_url=_resolve_database_url(),
             openai_system_prompt=os.getenv("OPENAI_SYSTEM_PROMPT", GREEK_TEACHER_PROMPT),
         )
+
+
+def _resolve_database_url() -> str:
+    """Compose the database URL from granular settings when not explicitly provided."""
+    url = os.getenv("DATABASE_URL")
+    if url:
+        return url
+
+    driver = os.getenv("DB_DRIVER", "postgresql+asyncpg")
+    host = os.getenv("DB_HOST", "localhost")
+    port = os.getenv("DB_PORT", "5432")
+    name = os.getenv("DB_NAME", "lang_agent")
+    user = os.getenv("DB_USER", "postgres")
+    password = os.getenv("DB_PASSWORD", "postgres")
+
+    auth = ""
+    if user:
+        encoded_password = quote_plus(password) if password else ""
+        auth = user if not encoded_password else f"{user}:{encoded_password}"
+        auth = f"{auth}@"
+
+    return f"{driver}://{auth}{host}:{port}/{name}"

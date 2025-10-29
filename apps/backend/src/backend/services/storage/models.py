@@ -41,10 +41,17 @@ class MessageRecord(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    direction: Mapped[MessageDirection] = mapped_column(SAEnum(MessageDirection), nullable=False)
+    direction: Mapped[MessageDirection] = mapped_column(
+        SAEnum(
+            MessageDirection,
+            name="messagedirection",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            create_type=False,
+        ),
+        nullable=False,
+    )
     content: Mapped[str] = mapped_column(Text(), nullable=False)
     model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc), index=True)
 
     user: Mapped["UserRecord"] = relationship(back_populates="messages")
-

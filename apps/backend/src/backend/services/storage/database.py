@@ -7,13 +7,14 @@ from typing import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-from .models import Base
+from .migrations import upgrade_head
 
 
 class Database:
     """Wrap async SQLAlchemy engine configuration for the bot runtime."""
 
     def __init__(self, url: str) -> None:
+        self._database_url = url
         self._engine: AsyncEngine = create_async_engine(url, future=True)
         self._session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
             bind=self._engine,
@@ -21,9 +22,8 @@ class Database:
         )
 
     async def initialize(self) -> None:
-        """Create database tables if they do not already exist."""
-        async with self._engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
+        """Ensure the database schema is migrated to the latest revision."""
+        await upgrade_head(self._database_url)
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
@@ -34,4 +34,3 @@ class Database:
     async def dispose(self) -> None:
         """Close the underlying engine."""
         await self._engine.dispose()
-

@@ -25,6 +25,8 @@ class UserMessagePayload:
 class ConversationService:
     """Coordinate message flow across persistence and the LLM."""
 
+    CONTEXT_MESSAGE_LIMIT = 10
+
     def __init__(
         self,
         *,
@@ -51,7 +53,11 @@ class ConversationService:
                 last_name=payload.last_name,
             )
 
-            history_records = await self._messages.fetch_recent_messages(session, user_id=user.id)
+            history_records = await self._messages.fetch_recent_messages(
+                session,
+                user_id=user.id,
+                limit=self.CONTEXT_MESSAGE_LIMIT,
+            )
             history: Sequence[Mapping[str, str]] = [
                 {
                     "role": "user" if record.direction == MessageDirection.INBOUND else "assistant",
@@ -80,4 +86,3 @@ class ConversationService:
             await session.commit()
 
         return reply
-

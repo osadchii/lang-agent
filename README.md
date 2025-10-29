@@ -64,6 +64,7 @@ docs/adr/         Architectural decision records
 - Run migrations without starting the bot: `python -m backend.cli migrate`.
 - Docker stack: `docker compose up --pull always` (or `make stack-docker`) exposes backend on `http://localhost:8000`, frontend on `http://localhost:4173`, and PostgreSQL on `localhost:5432`.
 - The provided `docker-compose.yml` includes Traefik labels and attaches both services to an external `web` network for production deployment. If you are testing locally without Traefik, comment out the `labels:` section and the `networks:` declarations before running `docker compose`.
+- For public routing via Traefik, set `TRAEFIK_HOST` (frontend) and `TRAEFIK_API_HOST` (backend API) in `.env`. The compose file routes the API on `TRAEFIK_API_HOST` and injects `VITE_API_BASE_URL` accordingly.
 - Frontend dev server: `npm run dev` in `apps/frontend/` (or `make frontend-dev`).
 
 ### HTTP API

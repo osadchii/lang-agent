@@ -15,6 +15,13 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.lang-agent-api.rule=Host(`${TRAEFIK_API_HOST}`)"
+      - "traefik.http.routers.lang-agent-api.entrypoints=websecure"
+      - "traefik.http.routers.lang-agent-api.tls.certresolver=myresolver"
+      - "traefik.http.services.lang-agent-api.loadbalancer.server.port=8000"
     networks:
       - web
       - backend
@@ -27,9 +34,10 @@ services:
     depends_on:
       - backend
     environment:
-      VITE_API_BASE_URL: http://backend:8000/api
+      VITE_API_BASE_URL: https://${TRAEFIK_API_HOST}/api
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=web"
       - "traefik.http.routers.lang-agent.rule=Host(`${TRAEFIK_HOST}`) && PathPrefix(`/`)"
       - "traefik.http.routers.lang-agent.entrypoints=websecure"
       - "traefik.http.routers.lang-agent.tls.certresolver=myresolver"

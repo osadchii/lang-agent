@@ -1,0 +1,16 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.sections {
+  display: grid;
+  gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .sections {
+    grid-template-columns: 2fr 1fr;
+  }
+}

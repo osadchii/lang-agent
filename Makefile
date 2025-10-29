@@ -1,4 +1,4 @@
-.PHONY: backend-install backend-dev backend-test stack-db stack-docker frontend-install frontend-dev frontend-build
+.PHONY: backend-install backend-dev backend-api backend-test stack-db stack-docker frontend-install frontend-dev frontend-build
 
 backend-install:
 	pip install -e .
@@ -6,6 +6,9 @@ backend-install:
 
 backend-dev:
 	python -m backend.cli
+
+backend-api:
+	uvicorn backend.api.app:create_api --factory --reload
 
 backend-test:
 	pytest

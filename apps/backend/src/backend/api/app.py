@@ -2,19 +2,47 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .dependencies import build_container, set_container
+from .routers import decks, training
 
 
-@dataclass
-class PlaceholderAPI:
-    """Minimal ASGI-compatible placeholder until the real framework is wired."""
+def create_api() -> FastAPI:
+    """Produce the FastAPI application instance to be mounted by an ASGI server."""
+    container = build_container()
+    set_container(container)
 
-    async def __call__(self, scope: dict[str, Any], receive: Callable[..., Awaitable[Any]], send: Callable[..., Awaitable[Any]]) -> None:
-        """Respond with 501 while the HTTP API surface is under construction."""
-        raise NotImplementedError("API layer not yet implemented")
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        await container.database.initialize()
+        try:
+            yield
+        finally:
+            await container.database.dispose()
 
+    app = FastAPI(
+        title="Lang Agent API",
+        version="0.1.0",
+        lifespan=lifespan,
+    )
 
-def create_api() -> PlaceholderAPI:
-    """Produce the API application instance to be mounted by an ASGI server."""
-    return PlaceholderAPI()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/health", tags=["system"])
+    async def healthcheck() -> dict[str, str]:
+        """Simple readiness probe."""
+        return {"status": "ok"}
+
+    app.include_router(decks.router, prefix="/api")
+    app.include_router(training.router, prefix="/api")
+    return app

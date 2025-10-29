@@ -31,27 +31,27 @@ export function ShellLayout({ header, footer, children }: ShellLayoutProps): JSX
               </span>
               <div className={styles.brandCopy}>
                 <span className={styles.brandName}>Kyma</span>
-                <span className={styles.brandTagline}>Cypriot Greek Studio</span>
+                <span className={styles.brandTagline}>Εργαστήρι Κυπριακών</span>
               </div>
             </div>
 
-            <nav className={styles.navLinks} aria-label="Primary navigation">
+            <nav className={styles.navLinks} aria-label="Основная навигация">
               <button className={styles.navLink} type="button">
-                Decks
+                Колоды
               </button>
               <button className={styles.navLink} type="button">
-                Flashcards
+                Карточки
               </button>
               <button className={styles.navLink} type="button">
-                Exercises
+                Упражнения
               </button>
               <button className={styles.navLink} type="button">
-                Insights
+                Аналитика
               </button>
             </nav>
 
             <button className={styles.navCta} type="button">
-              Join circle
+              Присоединиться к кругу
             </button>
           </div>
 

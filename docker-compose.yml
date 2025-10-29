@@ -24,6 +24,10 @@ services:
     ports:
       - "4173:80"
     restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE_URL: http://backend:8000/api
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.lang-agent.rule=Host(`${TRAEFIK_HOST}`) && PathPrefix(`/`)"
@@ -32,6 +36,7 @@ services:
       - "traefik.http.services.lang-agent.loadbalancer.server.port=80"
     networks:
       - web
+      - backend
 
   postgres:
     image: postgres:16-alpine

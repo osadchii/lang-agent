@@ -1,0 +1,212 @@
+.panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr);
+  gap: 1.5rem;
+  color: var(--text-primary);
+}
+
+.section {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.section h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.deckList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deckButton {
+  background: var(--surface-background);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0.75rem;
+  text-align: left;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.deckButton:hover {
+  border-color: var(--border-subtle);
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(16, 37, 66, 0.08);
+}
+
+.deckButtonActive {
+  border-color: rgba(15, 106, 180, 0.3);
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 106, 180, 0.14);
+}
+
+.deckMeta {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 0.75rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.formGroup label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input,
+.textarea {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  padding: 0.6rem 0.75rem;
+  color: var(--text-primary);
+  font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: rgba(31, 184, 209, 0.45);
+  box-shadow: var(--focus-ring);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+  border-radius: 999px;
+  padding: 0.65rem 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #0f6ab4 0%, #36d6c8 100%);
+  color: #ffffff;
+}
+
+.primaryButton:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.dangerButton {
+  background: #fee8eb;
+  color: #8f1e35;
+  border: 1px solid rgba(188, 46, 65, 0.2);
+}
+
+.secondaryButton {
+  background: var(--accent-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.secondaryButton:hover,
+.dangerButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(16, 37, 66, 0.1);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cardItem {
+  border: 1px solid var(--border-subtle);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 12px 24px rgba(16, 37, 66, 0.08);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.cardHeader strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.cardExample {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.emptyState,
+.error {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.error {
+  color: rgba(188, 46, 65, 0.9);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.spacer {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 0.75rem 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}

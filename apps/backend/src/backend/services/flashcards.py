@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from .llm import FlashcardContent, FlashcardGenerator
 from .storage.database import Database
-from .storage.models import UserCardRecord
+from .storage.models import DeckRecord, UserCardRecord
 from .storage.repositories import FlashcardRepository, UserRepository
 
 
@@ -65,8 +65,36 @@ class StudyCard:
     """A flashcard ready to be shown to the learner."""
 
     user_card_id: int
+    deck_id: int
     deck_name: str
     card: FlashcardData
+
+
+@dataclass(frozen=True)
+class DeckSummary:
+    """Aggregated information about a user's deck."""
+
+    deck_id: int
+    slug: str
+    name: str
+    description: str | None
+    card_count: int
+    due_count: int
+    created_at: dt.datetime
+
+
+@dataclass(frozen=True)
+class DeckCard:
+    """Card information tied to a specific deck for the user."""
+
+    user_card_id: int
+    deck_id: int
+    card: FlashcardData
+    last_rating: str | None
+    interval_minutes: int
+    review_count: int
+    next_review_at: dt.datetime
+    last_reviewed_at: dt.datetime | None
 
 
 class FlashcardService:
@@ -192,7 +220,12 @@ class FlashcardService:
             if record is None:
                 return None
             card_data = _to_flashcard_data(record.card)
-            return StudyCard(user_card_id=record.id, deck_name=record.deck.name, card=card_data)
+            return StudyCard(
+                user_card_id=record.id,
+                deck_id=record.deck_id,
+                deck_name=record.deck.name,
+                card=card_data,
+            )
 
     async def get_user_card(self, *, user_id: int, user_card_id: int) -> StudyCard:
         """Load a specific user-card record ensuring ownership."""
@@ -209,6 +242,7 @@ class FlashcardService:
                 raise ValueError("Карточка не найдена для этого пользователя.")
             return StudyCard(
                 user_card_id=record.id,
+                deck_id=record.deck_id,
                 deck_name=record.deck.name,
                 card=_to_flashcard_data(record.card),
             )
@@ -269,6 +303,228 @@ class FlashcardService:
         if review_count == 0:
             return base_easy
         return max(base_easy, int(previous * 2.5))
+
+    async def list_user_decks(self, profile: UserProfile) -> list[DeckSummary]:
+        """Return all decks owned by the user."""
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            rows = await self._flashcards.list_decks(session, owner_id=user.id)
+            return [
+                DeckSummary(
+                    deck_id=deck.id,
+                    slug=deck.slug,
+                    name=deck.name,
+                    description=deck.description,
+                    card_count=card_count,
+                    due_count=due_count,
+                    created_at=deck.created_at,
+                )
+                for deck, card_count, due_count in rows
+            ]
+
+    async def create_deck(
+        self,
+        profile: UserProfile,
+        *,
+        name: str,
+        description: str | None = None,
+    ) -> DeckSummary:
+        """Create a new deck owned by the user."""
+        if not name or not name.strip():
+            raise ValueError("Название колоды не может быть пустым.")
+
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            deck = await self._flashcards.create_deck(
+                session,
+                owner_id=user.id,
+                name=name.strip(),
+                description=description,
+            )
+            await session.commit()
+            return DeckSummary(
+                deck_id=deck.id,
+                slug=deck.slug,
+                name=deck.name,
+                description=deck.description,
+                card_count=0,
+                due_count=0,
+                created_at=deck.created_at,
+            )
+
+    async def update_deck(
+        self,
+        profile: UserProfile,
+        *,
+        deck_id: int,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> DeckSummary:
+        """Update an existing deck owned by the user."""
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            deck = await self._flashcards.update_deck(
+                session,
+                owner_id=user.id,
+                deck_id=deck_id,
+                name=name,
+                description=description,
+            )
+            rows = await self._flashcards.list_decks(session, owner_id=user.id)
+            await session.commit()
+        for deck_row, card_count, due_count in rows:
+            if deck_row.id == deck.id:
+                return DeckSummary(
+                    deck_id=deck_row.id,
+                    slug=deck_row.slug,
+                    name=deck_row.name,
+                    description=deck_row.description,
+                    card_count=card_count,
+                    due_count=due_count,
+                    created_at=deck_row.created_at,
+                )
+        raise ValueError("Колода не найдена.")
+
+    async def delete_deck(self, profile: UserProfile, *, deck_id: int) -> None:
+        """Remove a deck owned by the user."""
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            await self._flashcards.delete_deck(session, owner_id=user.id, deck_id=deck_id)
+            await session.commit()
+
+    async def list_deck_cards(
+        self,
+        profile: UserProfile,
+        *,
+        deck_id: int,
+    ) -> list[DeckCard]:
+        """Return cards in a deck for the user."""
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            deck = await self._require_deck(session, owner_id=user.id, deck_id=deck_id)
+            records = await self._flashcards.list_deck_cards(
+                session,
+                owner_id=user.id,
+                deck_id=deck.id,
+            )
+            await session.commit()
+        return [
+            DeckCard(
+                user_card_id=record.id,
+                deck_id=record.deck_id,
+                card=_to_flashcard_data(record.card),
+                last_rating=record.last_rating,
+                interval_minutes=record.interval_minutes,
+                review_count=record.review_count,
+                next_review_at=record.next_review_at,
+                last_reviewed_at=record.last_reviewed_at,
+            )
+            for record in records
+        ]
+
+    async def create_card_for_deck(
+        self,
+        profile: UserProfile,
+        *,
+        deck_id: int,
+        prompt_text: str,
+    ) -> FlashcardCreationResult:
+        """Generate or reuse a card and attach it to the specified deck."""
+        cleaned = prompt_text.strip()
+        if not cleaned:
+            raise ValueError("Текст карточки не может быть пустым.")
+
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            deck = await self._require_deck(session, owner_id=user.id, deck_id=deck_id)
+
+            normalized_prompt = self._flashcards.normalize_text(cleaned)
+            card = await self._flashcards.get_card_by_normalized(session, normalized_source=normalized_prompt)
+            reused_existing = card is not None
+
+            if card is None:
+                card = await self._flashcards.get_card_by_normalized_target(
+                    session,
+                    normalized_target=normalized_prompt,
+                )
+                reused_existing = card is not None
+
+            if card is None:
+                generated = await self._generator.generate_flashcard(prompt_word=cleaned)
+                card = await self._flashcards.create_card(
+                    session,
+                    source_text=generated.source_text or cleaned,
+                    target_text=generated.target_text,
+                    example_sentence=generated.example_sentence,
+                    example_translation=generated.example_translation,
+                    part_of_speech=generated.part_of_speech,
+                    extra=generated.extra,
+                )
+
+            user_card, created_link = await self._flashcards.ensure_user_card(
+                session,
+                user_id=user.id,
+                deck_id=deck.id,
+                card_id=card.id,
+            )
+            await session.commit()
+
+        return FlashcardCreationResult(
+            input_text=cleaned,
+            created_card=not reused_existing,
+            reused_existing_card=reused_existing,
+            linked_to_user=created_link,
+            card=_to_flashcard_data(card),
+            user_card_id=user_card.id,
+            message=None,
+            error=None,
+        )
+
+    async def remove_card_from_deck(
+        self,
+        profile: UserProfile,
+        *,
+        deck_id: int,
+        user_card_id: int,
+    ) -> None:
+        """Detach the specified user card from the deck."""
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            await self._require_deck(session, owner_id=user.id, deck_id=deck_id)
+            await self._flashcards.remove_user_card(
+                session,
+                owner_id=user.id,
+                deck_id=deck_id,
+                user_card_id=user_card_id,
+            )
+            await session.commit()
+
+    async def _get_or_create_user(self, session, profile: UserProfile):
+        """Ensure a user record exists and return it."""
+        return await self._users.upsert_user(
+            session,
+            user_id=profile.user_id,
+            username=profile.username,
+            first_name=profile.first_name,
+            last_name=profile.last_name,
+        )
+
+    async def _require_deck(
+        self,
+        session,
+        *,
+        owner_id: int,
+        deck_id: int,
+    ) -> DeckRecord:
+        """Fetch the deck for the user or raise a ValueError."""
+        deck = await self._flashcards.get_deck(
+            session,
+            owner_id=owner_id,
+            deck_id=deck_id,
+        )
+        if deck is None:
+            raise ValueError("Колода не найдена.")
+        return deck
 
 
 def _to_flashcard_data(card) -> FlashcardData:

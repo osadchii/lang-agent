@@ -5,7 +5,9 @@ from __future__ import annotations
 import datetime as dt
 from typing import Optional
 
-from sqlalchemy import select
+import re
+
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
@@ -143,10 +145,175 @@ class FlashcardRepository:
             await session.flush()
         return record
 
+    async def list_decks(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        as_of: dt.datetime | None = None,
+    ) -> list[tuple[DeckRecord, int, int]]:
+        """Return decks owned by the user along with card counts and due counts."""
+        reference = as_of or dt.datetime.now(dt.timezone.utc)
+        stmt = (
+            select(
+                DeckRecord,
+                func.count(UserCardRecord.id).label("card_count"),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (UserCardRecord.next_review_at <= reference, 1),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ).label("due_count"),
+            )
+            .outerjoin(
+                UserCardRecord,
+                and_(
+                    UserCardRecord.deck_id == DeckRecord.id,
+                    UserCardRecord.user_id == owner_id,
+                ),
+            )
+            .where(DeckRecord.owner_id == owner_id)
+            .group_by(DeckRecord.id)
+            .order_by(DeckRecord.created_at.asc())
+        )
+        result = await session.execute(stmt)
+        rows = list(result.all())
+        return [(row[0], int(row[1] or 0), int(row[2] or 0)) for row in rows]
+
+    async def create_deck(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        name: str,
+        description: str | None = None,
+    ) -> DeckRecord:
+        """Create a new deck owned by the user with a slug derived from its name."""
+        slug = self._generate_slug(name)
+        unique_slug = await self._ensure_unique_slug(session, owner_id=owner_id, slug=slug)
+        deck = DeckRecord(
+            owner_id=owner_id,
+            slug=unique_slug,
+            name=name.strip(),
+            description=description.strip() if description else None,
+        )
+        session.add(deck)
+        await session.flush()
+        return deck
+
+    async def get_deck(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        deck_id: int,
+    ) -> DeckRecord | None:
+        """Return the deck when it belongs to the user."""
+        stmt = select(DeckRecord).where(DeckRecord.id == deck_id, DeckRecord.owner_id == owner_id)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update_deck(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        deck_id: int,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> DeckRecord:
+        """Update mutable fields of an existing deck."""
+        deck = await self.get_deck(session, owner_id=owner_id, deck_id=deck_id)
+        if deck is None:
+            raise ValueError("Колода не найдена.")
+
+        if name and name.strip():
+            deck.name = name.strip()
+        if description is not None:
+            deck.description = description.strip() if description.strip() else None
+        await session.flush()
+        return deck
+
+    async def delete_deck(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        deck_id: int,
+    ) -> None:
+        """Delete a deck owned by the user."""
+        deck = await self.get_deck(session, owner_id=owner_id, deck_id=deck_id)
+        if deck is None:
+            raise ValueError("Колода не найдена.")
+        await session.delete(deck)
+        await session.flush()
+
+    async def list_deck_cards(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        deck_id: int,
+    ) -> list[UserCardRecord]:
+        """Return cards in the specified deck for the user."""
+        stmt = (
+            select(UserCardRecord)
+            .options(
+                selectinload(UserCardRecord.card),
+                selectinload(UserCardRecord.deck),
+            )
+            .where(
+                UserCardRecord.user_id == owner_id,
+                UserCardRecord.deck_id == deck_id,
+            )
+            .order_by(UserCardRecord.next_review_at.asc(), UserCardRecord.created_at.asc())
+        )
+        result = await session.execute(stmt)
+        return list(result.scalars())
+
+    async def remove_user_card(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        deck_id: int,
+        user_card_id: int,
+    ) -> None:
+        """Unlink a card from the user's deck."""
+        stmt = (
+            select(UserCardRecord)
+            .where(
+                UserCardRecord.id == user_card_id,
+                UserCardRecord.user_id == owner_id,
+                UserCardRecord.deck_id == deck_id,
+            )
+        )
+        result = await session.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record is None:
+            raise ValueError("Карточка не найдена в колоде.")
+        await session.delete(record)
+        await session.flush()
+
     async def get_card_by_normalized(self, session: AsyncSession, *, normalized_source: str) -> CardRecord | None:
         """Return an existing card matching the normalized source text."""
         result = await session.execute(
             select(CardRecord).where(CardRecord.normalized_source_text == normalized_source)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_card_by_normalized_target(
+        self,
+        session: AsyncSession,
+        *,
+        normalized_target: str,
+    ) -> CardRecord | None:
+        """Return an existing card matching the normalized target text."""
+        result = await session.execute(
+            select(CardRecord).where(CardRecord.normalized_target_text == normalized_target)
         )
         return result.scalar_one_or_none()
 
@@ -261,3 +428,38 @@ class FlashcardRepository:
     def normalize_text(text: str) -> str:
         """Return a case-insensitive normalization suitable for unique lookups."""
         return text.strip().casefold()
+
+    @staticmethod
+    def _generate_slug(name: str) -> str:
+        """Produce a slug-style identifier from the given name."""
+        cleaned = name.strip().lower()
+        # Replace any sequence of non-word characters with hyphen.
+        slug = re.sub(r"[^\w]+", "-", cleaned, flags=re.UNICODE).strip("-")
+        return slug or "deck"
+
+    async def _ensure_unique_slug(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        slug: str,
+    ) -> str:
+        """Ensure the slug is unique for the owner by appending a numeric suffix when needed."""
+        candidate = slug
+        index = 1
+        while await self._slug_exists(session, owner_id=owner_id, slug=candidate):
+            index += 1
+            candidate = f"{slug}-{index}"
+        return candidate
+
+    async def _slug_exists(
+        self,
+        session: AsyncSession,
+        *,
+        owner_id: int,
+        slug: str,
+    ) -> bool:
+        """Return True when the slug already exists for the owner."""
+        stmt = select(DeckRecord.id).where(DeckRecord.owner_id == owner_id, DeckRecord.slug == slug)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none() is not None

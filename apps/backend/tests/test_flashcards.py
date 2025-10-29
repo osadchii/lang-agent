@@ -139,3 +139,49 @@ async def test_review_schedule_updates_interval(tmp_path) -> None:
     assert scheduled > dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=1)
 
     await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_deck_crud_and_card_generation(tmp_path) -> None:
+    """Deck creation, card generation, and removal should work end-to-end."""
+    database = Database(f"sqlite+aiosqlite:///{tmp_path/'flashcards-decks.db'}")
+    await database.initialize()
+
+    generator = StubFlashcardGenerator()
+    service = FlashcardService(
+        database=database,
+        generator=generator,
+        random_source=random.Random(3),
+    )
+
+    profile = UserProfile(user_id=77, username="deckster", first_name="Deck", last_name=None)
+
+    deck = await service.create_deck(profile, name="Morning Practice", description="Warm-up phrases")
+    assert deck.slug.startswith("morning-practice")
+
+    duplicate = await service.create_deck(profile, name="Morning Practice", description=None)
+    assert duplicate.slug != deck.slug
+
+    await service.delete_deck(profile, deck_id=duplicate.deck_id)
+
+    decks = await service.list_user_decks(profile)
+    assert len(decks) == 1
+    assert decks[0].deck_id == deck.deck_id
+
+    creation = await service.create_card_for_deck(profile, deck_id=deck.deck_id, prompt_text="привет")
+    assert creation.card is not None
+    assert creation.user_card_id is not None
+
+    cards = await service.list_deck_cards(profile, deck_id=deck.deck_id)
+    assert len(cards) == 1
+    assert cards[0].card.source_text == "привет"
+
+    await service.remove_card_from_deck(profile, deck_id=deck.deck_id, user_card_id=creation.user_card_id)
+    cards_after_remove = await service.list_deck_cards(profile, deck_id=deck.deck_id)
+    assert cards_after_remove == []
+
+    await service.delete_deck(profile, deck_id=deck.deck_id)
+    decks_after_delete = await service.list_user_decks(profile)
+    assert decks_after_delete == []
+
+    await database.dispose()

@@ -1,0 +1,140 @@
+.panel {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: var(--shadow-subtle);
+  color: var(--text-primary);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.header p {
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.cardShell {
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15, 106, 180, 0.12), rgba(54, 214, 200, 0.18));
+  border: 1px solid rgba(15, 106, 180, 0.16);
+  box-shadow: 0 16px 30px rgba(15, 45, 77, 0.18);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 220px;
+}
+
+.cardShell h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.prompt {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+
+.secondaryText {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.primaryButton,
+.secondaryButton,
+.againButton,
+.reviewButton,
+.easyButton {
+  padding: 0.7rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #0f6ab4 0%, #36d6c8 100%);
+  color: #ffffff;
+}
+
+.secondaryButton {
+  background: var(--accent-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.againButton {
+  background: #fee8eb;
+  color: #8f1e35;
+  border: 1px solid rgba(188, 46, 65, 0.2);
+}
+
+.reviewButton {
+  background: #ffeec4;
+  color: #6d3c00;
+  border: 1px solid rgba(194, 134, 0, 0.36);
+}
+
+.easyButton {
+  background: #d9f5ea;
+  color: #25593d;
+  border: 1px solid rgba(37, 89, 61, 0.24);
+}
+
+.primaryButton:hover,
+.secondaryButton:hover,
+.againButton:hover,
+.reviewButton:hover,
+.easyButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(16, 37, 66, 0.12);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.againButton:disabled,
+.reviewButton:disabled,
+.easyButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.status {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.error {
+  font-size: 0.9rem;
+  color: rgba(188, 46, 65, 0.9);
+}
+
+.muted {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}

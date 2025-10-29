@@ -15,6 +15,7 @@ AI-assisted tooling for learning Greek. The repository hosts both the backend se
 - **Automated delivery**: CI builds, tests, publishes Docker images, and deploys to Raspberry Pi via GitHub Actions.
 - **Infrastructure-aware**: Optional Traefik routing baked into `docker-compose.yml`; can be disabled for local testing.
 - **Documented process**: ADRs in `docs/adr`, engineering expectations in `AGENTS.md`.
+- **Decks + training API**: FastAPI surface serving deck CRUD, AI-powered card generation, and spaced repetition review.
 
 ## Repository Map
 ```
@@ -55,7 +56,8 @@ docs/adr/         Architectural decision records
 ### Frontend (React)
 1. Install Node.js 18.18+ and npm 9+.
 2. From `apps/frontend/`, install deps: `npm install`.
-3. Start dev server: `npm run dev` (served at `http://localhost:5173`).
+3. Copy the root `.env.example` values for `VITE_API_BASE_URL`, `VITE_USER_ID`, and related headers into `apps/frontend/.env.local` (or `.env`) so the browser can authenticate requests.
+4. Start dev server: `npm run dev` (served at `http://localhost:5173`).
 
 ## Running Locally
 - Backend CLI: `python -m backend.cli` (or `make backend-dev`).
@@ -63,6 +65,16 @@ docs/adr/         Architectural decision records
 - Docker stack: `docker compose up --pull always` (or `make stack-docker`) exposes backend on `http://localhost:8000`, frontend on `http://localhost:4173`, and PostgreSQL on `localhost:5432`.
 - The provided `docker-compose.yml` includes Traefik labels and attaches both services to an external `web` network for production deployment. If you are testing locally without Traefik, comment out the `labels:` section and the `networks:` declarations before running `docker compose`.
 - Frontend dev server: `npm run dev` in `apps/frontend/` (or `make frontend-dev`).
+
+### HTTP API
+- Base URL: `http://localhost:8000/api` (configure via `VITE_API_BASE_URL` for the mini app).
+- Authentication: pass learner context via headers — at minimum `X-User-Id`. Optional headers (`X-User-Username`, `X-User-First-Name`, `X-User-Last-Name`) hydrate profile data without touching Telegram.
+- Endpoints:
+  - `GET /decks` — list decks with card counts and due totals.
+  - `POST /decks`, `PATCH /decks/{id}`, `DELETE /decks/{id}` — manage decks.
+  - `GET /decks/{id}/cards`, `POST /decks/{id}/cards`, `DELETE /decks/{id}/cards/{user_card_id}` — generate AI translations/examples and curate deck membership.
+  - `GET /training/next` — fetch the next due card (prompt side randomized server-side).
+  - `POST /training/cards/{user_card_id}/review` — record spaced repetition rating (`again`, `review`, `easy`).
 
 ### Telegram Bot Commands
 - `/add <слово>` — создаёт карточку с переводом и примером. Существительные автоматически получают греческий артикль; существующие карточки переиспользуются и не дублируются.

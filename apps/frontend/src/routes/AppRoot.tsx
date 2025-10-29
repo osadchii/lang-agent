@@ -1,31 +1,33 @@
-import { useMemo } from "react";
-
-import { LessonList } from "@routes/dashboard/LessonList";
 import { ShellLayout } from "@components/ShellLayout";
-import { useMockLessons } from "@hooks/useMockLessons";
+import { DecksPanel } from "@components/decks/DecksPanel";
+import { TrainingPanel } from "@components/training/TrainingPanel";
+
+import styles from "./AppRoot.module.css";
 
 export function App(): JSX.Element {
-  const lessons = useMockLessons();
-  const activeCount = useMemo(() => lessons.filter((lesson) => lesson.status === "in-progress").length, [lessons]);
-
   return (
     <ShellLayout
       header={{
         eyebrow: "Κύμα · Μαθαίνω",
-        title: "Cypriot Greek Journeys",
-        subtitle: "Design your everyday ritual with sunlit decks, coastal drills, and mindful review.",
-        supporting: "A curated flow across flashcards, exercises, and story-driven practice inspired by Mediterranean rhythms."
+        title: "Создавай колоды. Тренируй память. Μαζί играем.",
+        subtitle: "Собирай двусторонние карточки русское ↔ ελληνικό с подсказками ИИ и оценивай свои ответы в привычном бот-потоке.",
+        supporting: "Управление колодами и тренировки теперь внутри мини-приложения, так что η πρακτική остаётся синхронной где бы ты ни учился."
       }}
       footer={{
-        caption: `Sea breeze check-in · ${activeCount} active lesson${activeCount === 1 ? "" : "s"} this week`,
-        ctaLabel: "Plan my ritual",
+        caption: "Готов продолжить? Возвращайся в мастерскую колод в любой момент.",
+        ctaLabel: "Синхронизировать с Telegram",
         onCtaClick: () => {
           // Placeholder for navigation once routing lands.
-          console.info("Schedule navigation requested");
+          console.info("Запрошена синхронизация с Telegram");
         }
       }}
     >
-      <LessonList lessons={lessons} />
+      <div className={styles.content}>
+        <div className={styles.sections}>
+          <DecksPanel />
+          <TrainingPanel />
+        </div>
+      </div>
     </ShellLayout>
   );
 }

@@ -11,17 +11,17 @@ services:
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "8000:8000"
+      - "8000:80"
     restart: unless-stopped
     depends_on:
       - postgres
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=web"
-      - "traefik.http.routers.lang-agent-api.rule=Host(`${TRAEFIK_API_HOST}`)"
+      - "traefik.http.routers.lang-agent-api.rule=Host(`${TRAEFIK_API_HOST}`) && PathPrefix(`/`)"
       - "traefik.http.routers.lang-agent-api.entrypoints=websecure"
       - "traefik.http.routers.lang-agent-api.tls.certresolver=myresolver"
-      - "traefik.http.services.lang-agent-api.loadbalancer.server.port=8000"
+      - "traefik.http.services.lang-agent-api.loadbalancer.server.port=80"
     networks:
       - web
       - backend

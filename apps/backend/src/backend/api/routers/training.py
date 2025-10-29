@@ -21,8 +21,10 @@ async def get_next_training_card(
     if study_card is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    prompt, hidden = flashcards.choose_prompt_side(study_card.card)
-    prompt_side = "source" if prompt == study_card.card.source_text else "target"
+    # Deterministically present the source side first; keep API predictable.
+    prompt = study_card.card.source_text
+    hidden = study_card.card.target_text
+    prompt_side = "source"
 
     return schemas.TrainingCardModel(
         user_card_id=study_card.user_card_id,

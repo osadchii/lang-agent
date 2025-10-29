@@ -8,7 +8,7 @@ import re
 from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, ErrorEvent, Message
+from aiogram.types import CallbackQuery, ErrorEvent, Message, User
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .conversation import ConversationService, UserMessagePayload
@@ -48,11 +48,12 @@ class TelegramBotRunner:
 
     async def _handle_add_command(self, message: Message) -> None:
         """Process the /add command for creating flashcards."""
-        if not message.from_user:
+        user = message.from_user
+        if user is None:
             logger.debug("Skipping /add without sender: %s", message.message_id)
             return
 
-        profile = self._to_profile(message)
+        profile = self._to_profile(user)
         words = self._extract_words(message.text or "")
         if not words:
             await self._safe_reply(
@@ -73,11 +74,12 @@ class TelegramBotRunner:
 
     async def _handle_flashcard_command(self, message: Message) -> None:
         """Serve the next due flashcard to the learner."""
-        if not message.from_user:
+        user = message.from_user
+        if user is None:
             logger.debug("Skipping /flashcard without sender: %s", message.message_id)
             return
 
-        profile = self._to_profile(message)
+        profile = self._to_profile(user)
         await self._flashcards.ensure_user(profile)
 
         try:
@@ -128,12 +130,13 @@ class TelegramBotRunner:
 
     async def _handle_flashcard_show(self, callback: CallbackQuery, user_card_id: int) -> None:
         """Reveal the complete flashcard content."""
-        if not callback.from_user:
+        user = callback.from_user
+        if user is None:
             await callback.answer()
             return
         try:
             study_card = await self._flashcards.get_user_card(
-                user_id=callback.from_user.id,
+                user_id=user.id,
                 user_card_id=user_card_id,
             )
         except Exception:
@@ -153,7 +156,8 @@ class TelegramBotRunner:
         rating: ReviewRating,
     ) -> None:
         """Apply the learner's feedback to the flashcard schedule."""
-        if not callback.from_user:
+        user = callback.from_user
+        if user is None:
             await callback.answer()
             return
 
@@ -165,11 +169,11 @@ class TelegramBotRunner:
 
         try:
             study_card = await self._flashcards.get_user_card(
-                user_id=callback.from_user.id,
+                user_id=user.id,
                 user_card_id=user_card_id,
             )
             await self._flashcards.record_review(
-                user_id=callback.from_user.id,
+                user_id=user.id,
                 user_card_id=user_card_id,
                 rating=rating,
             )
@@ -184,15 +188,16 @@ class TelegramBotRunner:
 
     async def _handle_text_message(self, message: Message) -> None:
         """Process inbound text messages."""
-        if not message.from_user:
+        user = message.from_user
+        if user is None:
             logger.debug("Skipping message without sender: %s", message.message_id)
             return
 
         payload = UserMessagePayload(
-            user_id=message.from_user.id,
-            username=message.from_user.username,
-            first_name=message.from_user.first_name,
-            last_name=message.from_user.last_name,
+            user_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
             text=message.text or "",
         )
 
@@ -216,10 +221,11 @@ class TelegramBotRunner:
 
     async def _safe_edit(self, callback: CallbackQuery, text: str, reply_markup=None) -> None:
         """Edit a message while handling Telegram errors gracefully."""
-        if not callback.message:
+        msg = callback.message
+        if msg is None:
             return
         try:
-            await callback.message.edit_text(text, reply_markup=reply_markup)
+            await msg.edit_text(text, reply_markup=reply_markup)
         except TelegramBadRequest:
             logger.exception("Failed to edit reply for callback %s", callback.id)
         except Exception:  # pragma: no cover - defensive branch
@@ -237,9 +243,8 @@ class TelegramBotRunner:
         raise event.exception
 
     @staticmethod
-    def _to_profile(message: Message) -> UserProfile:
-        """Convert a Telegram message into a lightweight user profile."""
-        user = message.from_user
+    def _to_profile(user: User) -> UserProfile:
+        """Convert a Telegram user into a lightweight user profile."""
         return UserProfile(
             user_id=user.id,
             username=user.username,

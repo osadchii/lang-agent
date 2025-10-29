@@ -97,11 +97,11 @@ async function extractErrorMessage(response: Response): Promise<string | undefin
 }
 
 export async function fetchDecks(): Promise<DeckSummary[]> {
-  return request<DeckSummary[]>("/decks");
+  return request<DeckSummary[]>("/decks/");
 }
 
 export async function createDeck(input: { name: string; description?: string | null }): Promise<DeckSummary> {
-  return request<DeckSummary>("/decks", {
+  return request<DeckSummary>("/decks/", {
     method: "POST",
     body: JSON.stringify(input)
   });

@@ -20,7 +20,10 @@ def _ensure_env_loaded() -> None:
     if _ENV_LOADED:
         return
     if load_dotenv is not None:
-        load_dotenv()
+        try:
+            load_dotenv(interpolate=False)
+        except TypeError:  # pragma: no cover - older python-dotenv versions
+            load_dotenv()
     _ENV_LOADED = True
 
 

@@ -4,8 +4,19 @@ from __future__ import annotations
 
 import datetime as dt
 from enum import Enum
+from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, Enum as SAEnum, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Enum as SAEnum,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -32,6 +43,8 @@ class UserRecord(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc))
 
     messages: Mapped[list["MessageRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    owned_decks: Mapped[list["DeckRecord"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
+    flashcards: Mapped[list["UserCardRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class MessageRecord(Base):
@@ -55,3 +68,69 @@ class MessageRecord(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc), index=True)
 
     user: Mapped["UserRecord"] = relationship(back_populates="messages")
+
+
+class DeckRecord(Base):
+    """A collection of flashcards grouped for study."""
+
+    __tablename__ = "decks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    slug: Mapped[str] = mapped_column(String(128), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc))
+
+    __table_args__ = (
+        UniqueConstraint("owner_id", "slug", name="uq_decks_owner_slug"),
+    )
+
+    owner: Mapped["UserRecord | None"] = relationship(back_populates="owned_decks")
+    user_cards: Mapped[list["UserCardRecord"]] = relationship(back_populates="deck", cascade="all, delete-orphan")
+
+
+class CardRecord(Base):
+    """Canonical flashcard content reusable across users."""
+
+    __tablename__ = "cards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_text: Mapped[str] = mapped_column(Text(), nullable=False)
+    source_language: Mapped[str] = mapped_column(String(16), nullable=False, default="ru")
+    normalized_source_text: Mapped[str] = mapped_column(String(512), nullable=False, unique=True, index=True)
+    target_text: Mapped[str] = mapped_column(Text(), nullable=False)
+    target_language: Mapped[str] = mapped_column(String(16), nullable=False, default="el")
+    normalized_target_text: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
+    example_sentence: Mapped[str] = mapped_column(Text(), nullable=False)
+    example_translation: Mapped[str] = mapped_column(Text(), nullable=False)
+    part_of_speech: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    extra: Mapped[dict[str, Any] | None] = mapped_column(JSON(), nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc))
+
+    user_cards: Mapped[list["UserCardRecord"]] = relationship(back_populates="card")
+
+
+class UserCardRecord(Base):
+    """User-specific study metadata referencing reusable cards."""
+
+    __tablename__ = "user_cards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    deck_id: Mapped[int] = mapped_column(ForeignKey("decks.id", ondelete="CASCADE"), nullable=False, index=True)
+    card_id: Mapped[int] = mapped_column(ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
+    last_rating: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    review_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_review_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    last_reviewed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc))
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "deck_id", "card_id", name="uq_user_deck_card"),
+    )
+
+    user: Mapped["UserRecord"] = relationship(back_populates="flashcards")
+    deck: Mapped["DeckRecord"] = relationship(back_populates="user_cards")
+    card: Mapped["CardRecord"] = relationship(back_populates="user_cards")

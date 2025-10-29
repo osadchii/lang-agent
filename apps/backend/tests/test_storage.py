@@ -26,4 +26,19 @@ async def test_initialize_runs_migrations(tmp_path) -> None:
         column_names = [row[1] for row in columns]
         assert {"user_id", "direction", "content"} <= set(column_names)
 
+        decks = await session.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='decks'")
+        )
+        assert decks.scalar_one_or_none() == "decks"
+
+        cards = await session.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='cards'")
+        )
+        assert cards.scalar_one_or_none() == "cards"
+
+        user_cards = await session.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='user_cards'")
+        )
+        assert user_cards.scalar_one_or_none() == "user_cards"
+
     await database.dispose()

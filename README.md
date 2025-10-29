@@ -64,6 +64,10 @@ docs/adr/         Architectural decision records
 - The provided `docker-compose.yml` includes Traefik labels and attaches both services to an external `web` network for production deployment. If you are testing locally without Traefik, comment out the `labels:` section and the `networks:` declarations before running `docker compose`.
 - Frontend dev server: `npm run dev` in `apps/frontend/` (or `make frontend-dev`).
 
+### Telegram Bot Commands
+- `/add <слово>` — создаёт карточку с переводом и примером. Существительные автоматически получают греческий артикль; существующие карточки переиспользуются и не дублируются.
+- `/flashcard` — показывает следующую карточку из вашей колоды. Сперва отображается случайная сторона карточки, затем можно раскрыть её полностью и оценить изучение кнопками «Не знаю», «Повторить» или «Знаю».
+
 ### Make Targets
 - `make backend-dev` – run the backend CLI entrypoint.
 - `make backend-test` – execute backend tests (`pytest`).

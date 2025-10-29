@@ -11,12 +11,14 @@ export function App(): JSX.Element {
   return (
     <ShellLayout
       header={{
-        title: "Greek Lessons",
-        subtitle: "Progress through bitesized exercises and vocabulary cards."
+        eyebrow: "Κύμα · Μαθαίνω",
+        title: "Cypriot Greek Journeys",
+        subtitle: "Design your everyday ritual with sunlit decks, coastal drills, and mindful review.",
+        supporting: "A curated flow across flashcards, exercises, and story-driven practice inspired by Mediterranean rhythms."
       }}
       footer={{
-        caption: `${activeCount} lesson${activeCount === 1 ? "" : "s"} in progress`,
-        ctaLabel: "View Schedule",
+        caption: `Sea breeze check-in · ${activeCount} active lesson${activeCount === 1 ? "" : "s"} this week`,
+        ctaLabel: "Plan my ritual",
         onCtaClick: () => {
           // Placeholder for navigation once routing lands.
           console.info("Schedule navigation requested");

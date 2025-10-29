@@ -1,17 +1,34 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap");
 
 :root {
   color-scheme: light;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
 
-  --surface-background: #f8fafc;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --border-subtle: rgba(148, 163, 184, 0.4);
-  --accent-primary: linear-gradient(135deg, #2f80ed, #56ccf2);
-  --accent-secondary: #e0f2fe;
+  --font-body: "Noto Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: "Playfair Display", "Noto Serif", "Times New Roman", serif;
+
+  --surface-background: #f6f7fb;
+  --surface-elevated: rgba(255, 255, 255, 0.78);
+  --surface-glass: rgba(255, 255, 255, 0.6);
+  --surface-card: rgba(255, 255, 255, 0.82);
+
+  --text-primary: #102542;
+  --text-secondary: #3f546c;
+  --text-muted: rgba(16, 37, 66, 0.68);
+
+  --border-subtle: rgba(16, 37, 66, 0.18);
+
+  --accent-primary: linear-gradient(135deg, #0f6ab4 0%, #1fb8d1 50%, #36d6c8 100%);
+  --accent-secondary: #f0f3f8;
+  --accent-tertiary: #f6d6a8;
+  --accent-olive: #8aa371;
+
+  --shadow-soft: 0 18px 40px rgba(12, 53, 96, 0.14);
+  --shadow-subtle: 0 12px 24px rgba(15, 45, 77, 0.08);
+
+  --focus-ring: 0 0 0 3px rgba(31, 184, 209, 0.35);
 }
 
 *,
@@ -22,7 +39,37 @@
 
 body {
   margin: 0;
-  background: var(--surface-background);
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef4fb 0%, #fdf4e5 100%);
+  color: var(--text-primary);
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(0);
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  background: radial-gradient(circle at 20% 20%, rgba(15, 106, 180, 0.22) 0%, transparent 65%);
+  width: 60vw;
+  height: 60vw;
+  top: -20vw;
+  left: -10vw;
+}
+
+body::after {
+  background: radial-gradient(circle at 80% 80%, rgba(246, 214, 168, 0.3) 0%, transparent 70%);
+  width: 70vw;
+  height: 70vw;
+  bottom: -35vw;
+  right: -20vw;
 }
 
 button {
@@ -32,4 +79,23 @@ button {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  letter-spacing: 0.01em;
+}
+
+p {
+  max-width: 75ch;
+}
+
+.glass-panel {
+  background: var(--surface-glass);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: var(--shadow-subtle);
+  backdrop-filter: blur(18px);
 }

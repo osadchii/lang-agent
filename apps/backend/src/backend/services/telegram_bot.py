@@ -224,6 +224,10 @@ class TelegramBotRunner:
         msg = callback.message
         if msg is None:
             return
+        # In group contexts or when the bot lacks access, Telegram returns
+        # InaccessibleMessage which doesn't support edit operations.
+        if not isinstance(msg, Message):
+            return
         try:
             await msg.edit_text(text, reply_markup=reply_markup)
         except TelegramBadRequest:

@@ -8,11 +8,29 @@ import type {
 
 type RequestOptions = RequestInit & { skipAuthHeaders?: boolean };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-const USER_ID = Number.parseInt(import.meta.env.VITE_USER_ID ?? "1", 10);
-const USERNAME = import.meta.env.VITE_USER_USERNAME ?? "";
-const USER_FIRST_NAME = import.meta.env.VITE_USER_FIRST_NAME ?? "";
-const USER_LAST_NAME = import.meta.env.VITE_USER_LAST_NAME ?? "";
+type RuntimeConfig = {
+  apiBaseUrl?: string;
+  userId?: string;
+  userUsername?: string;
+  userFirstName?: string;
+  userLastName?: string;
+};
+
+declare global {
+  interface Window {
+    __APP_CONFIG__?: RuntimeConfig;
+  }
+}
+
+const runtimeConfig: RuntimeConfig =
+  typeof window !== "undefined" && window.__APP_CONFIG__ ? window.__APP_CONFIG__ : {};
+
+const API_BASE_URL =
+  runtimeConfig.apiBaseUrl?.trim() || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const USER_ID = Number.parseInt(runtimeConfig.userId ?? import.meta.env.VITE_USER_ID ?? "1", 10);
+const USERNAME = runtimeConfig.userUsername ?? import.meta.env.VITE_USER_USERNAME ?? "";
+const USER_FIRST_NAME = runtimeConfig.userFirstName ?? import.meta.env.VITE_USER_FIRST_NAME ?? "";
+const USER_LAST_NAME = runtimeConfig.userLastName ?? import.meta.env.VITE_USER_LAST_NAME ?? "";
 
 const AUTH_HEADER_VALUES: Record<string, string> = {
   "X-User-Id": Number.isNaN(USER_ID) ? "1" : String(USER_ID)

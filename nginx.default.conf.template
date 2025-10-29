@@ -1,0 +1,18 @@
+server {
+  listen       80 default_server;
+  server_name  _;
+
+  root   /usr/share/nginx/html;
+  index  index.html;
+
+  # Serve SPA
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  # Replace default API URL in built assets with runtime value
+  sub_filter_once off;
+  sub_filter_types application/javascript text/html;
+  sub_filter "http://localhost:8000/api" "$VITE_API_BASE_URL";
+  sub_filter "http://backend:8000/api" "$VITE_API_BASE_URL";
+}

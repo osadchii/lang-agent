@@ -28,19 +28,16 @@ services:
       - backend
 
   frontend:
-    image: ghcr.io/osadchii/lang-agent-frontend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: https://${TRAEFIK_API_HOST}/api
     ports:
       - "4173:80"
     restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      VITE_API_BASE_URL: https://${TRAEFIK_API_HOST}/api
-    volumes:
-      - type: bind
-        source: ./nginx.default.conf.template
-        target: /etc/nginx/templates/default.conf.template
-        read_only: true
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=web"

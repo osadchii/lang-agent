@@ -8,7 +8,7 @@ import type {
 
 type RequestOptions = RequestInit & { skipAuthHeaders?: boolean };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 const USER_ID = Number.parseInt(import.meta.env.VITE_USER_ID ?? "1", 10);
 const USERNAME = import.meta.env.VITE_USER_USERNAME ?? "";
 const USER_FIRST_NAME = import.meta.env.VITE_USER_FIRST_NAME ?? "";

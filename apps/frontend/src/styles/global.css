@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap");
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
@@ -9,26 +9,26 @@
   --font-body: "Noto Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-heading: "Playfair Display", "Noto Serif", "Times New Roman", serif;
 
-  --surface-background: #f6f7fb;
-  --surface-elevated: rgba(255, 255, 255, 0.78);
-  --surface-glass: rgba(255, 255, 255, 0.6);
-  --surface-card: rgba(255, 255, 255, 0.82);
+  --surface-background: rgba(7, 16, 40, 0.62);
+  --surface-elevated: rgba(15, 29, 63, 0.78);
+  --surface-glass: rgba(16, 33, 70, 0.72);
+  --surface-card: rgba(17, 36, 74, 0.78);
 
-  --text-primary: #102542;
-  --text-secondary: #3f546c;
-  --text-muted: rgba(16, 37, 66, 0.68);
+  --text-primary: #f6f3ff;
+  --text-secondary: rgba(226, 219, 248, 0.82);
+  --text-muted: rgba(226, 219, 248, 0.6);
 
-  --border-subtle: rgba(16, 37, 66, 0.18);
+  --border-subtle: rgba(255, 143, 61, 0.24);
 
-  --accent-primary: linear-gradient(135deg, #0f6ab4 0%, #1fb8d1 50%, #36d6c8 100%);
-  --accent-secondary: #f0f3f8;
-  --accent-tertiary: #f6d6a8;
-  --accent-olive: #8aa371;
+  --accent-primary: linear-gradient(135deg, #ff8f3f 0%, #ff5a4f 50%, #f7b267 100%);
+  --accent-secondary: rgba(22, 44, 88, 0.68);
+  --accent-tertiary: rgba(255, 202, 112, 0.35);
+  --accent-olive: rgba(136, 175, 127, 0.75);
 
-  --shadow-soft: 0 18px 40px rgba(12, 53, 96, 0.14);
-  --shadow-subtle: 0 12px 24px rgba(15, 45, 77, 0.08);
+  --shadow-soft: 0 28px 60px rgba(2, 8, 20, 0.5);
+  --shadow-subtle: 0 18px 42px rgba(7, 20, 46, 0.32);
 
-  --focus-ring: 0 0 0 3px rgba(31, 184, 209, 0.35);
+  --focus-ring: 0 0 0 3px rgba(255, 143, 61, 0.42);
 }
 
 *,
@@ -40,7 +40,11 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #eef4fb 0%, #fdf4e5 100%);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 143, 61, 0.42) 0%, rgba(255, 143, 61, 0) 56%),
+    radial-gradient(circle at 82% 24%, rgba(40, 132, 192, 0.35) 0%, rgba(40, 132, 192, 0) 60%),
+    radial-gradient(circle at 65% 82%, rgba(255, 208, 99, 0.22) 0%, rgba(255, 208, 99, 0) 58%),
+    linear-gradient(180deg, #040b1a 0%, #07142c 46%, #110b24 100%);
   color: var(--text-primary);
   position: relative;
   overflow-x: hidden;
@@ -51,25 +55,37 @@ body::after {
   content: "";
   position: fixed;
   border-radius: 999px;
-  filter: blur(0);
   pointer-events: none;
   z-index: -1;
 }
 
 body::before {
-  background: radial-gradient(circle at 20% 20%, rgba(15, 106, 180, 0.22) 0%, transparent 65%);
-  width: 60vw;
-  height: 60vw;
-  top: -20vw;
-  left: -10vw;
+  width: 90vw;
+  height: 90vw;
+  left: -25vw;
+  bottom: -40vw;
+  background:
+    radial-gradient(ellipse at top, rgba(23, 86, 140, 0.6), rgba(23, 86, 140, 0)),
+    linear-gradient(165deg, rgba(14, 66, 116, 0.85) 0%, rgba(14, 66, 116, 0.35) 65%);
+  clip-path: polygon(0% 58%, 8% 52%, 20% 55%, 32% 48%, 44% 53%, 57% 46%, 70% 51%, 82% 44%, 95% 49%, 100% 44%, 100% 100%, 0% 100%);
+  box-shadow: 0 30px 60px rgba(3, 11, 28, 0.4);
+  opacity: 0.55;
 }
 
 body::after {
-  background: radial-gradient(circle at 80% 80%, rgba(246, 214, 168, 0.3) 0%, transparent 70%);
-  width: 70vw;
-  height: 70vw;
-  bottom: -35vw;
-  right: -20vw;
+  top: 8vh;
+  right: 4vw;
+  width: clamp(240px, 32vw, 400px);
+  height: clamp(180px, 25vw, 300px);
+  background-image:
+    radial-gradient(circle at 35% 85%, rgba(255, 208, 99, 0.35) 0%, transparent 70%),
+    radial-gradient(circle at 70% 18%, rgba(255, 143, 61, 0.42) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20320%20120%27%3E%5Cn%20%20%3Cg%20fill%3D%27none%27%20stroke%3D%27rgba%28255%2C255%2C255%2C0.28%29%27%20stroke-width%3D%274%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%5Cn%20%20%20%20%3Cpath%20d%3D%27M20%2080%20Q40%2060%2060%2080%20T100%2080%27/%3E%5Cn%20%20%20%20%3Cpath%20d%3D%27M140%2070%20h32%20a8%208%200%200%200%208-8%20V40%20h-48%20v22%20a8%208%200%200%200%208%208%20z%20m0-30%20h48%27/%3E%5Cn%20%20%20%20%3Cpath%20d%3D%27M220%2090%20q-12-10%20-12-24%200-18%2016-24%206-12%2020-12%2014%200%2020%2012%2016%206%2016%2024%200%2014-12%2024%27/%3E%5Cn%20%20%20%20%3Cpath%20d%3D%27M300%2040%20l18%206%20-6%2018%20-24%2012%20-12%204%204-12%208-28z%27/%3E%5Cn%20%20%3C/g%3E%5Cn%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 110% 110%, 85% 85%, contain;
+  background-position: 50% 100%, 80% 0%, center;
+  opacity: 0.55;
+  mix-blend-mode: screen;
 }
 
 button {

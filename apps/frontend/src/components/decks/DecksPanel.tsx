@@ -1,8 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { useDeckManager } from "@hooks/useDeckManager";
+import { generateDeckCards } from "@api/client";
 
 import styles from "./DecksPanel.module.css";
+
+type View = "edit" | "create";
 
 export function DecksPanel(): JSX.Element {
   const {
@@ -20,9 +23,11 @@ export function DecksPanel(): JSX.Element {
     updateDeck,
     deleteDeck,
     createCard,
-    removeCard
+    removeCard,
+    refreshCards
   } = useDeckManager();
 
+  const [view, setView] = useState<View>("edit");
   const [newDeckName, setNewDeckName] = useState("");
   const [newDeckDescription, setNewDeckDescription] = useState("");
 
@@ -31,11 +36,13 @@ export function DecksPanel(): JSX.Element {
   const [editName, setEditName] = useState(selectedDeck?.name ?? "");
   const [editDescription, setEditDescription] = useState(selectedDeck?.description ?? "");
   const [cardPrompt, setCardPrompt] = useState("");
+  const [generatePrompt, setGeneratePrompt] = useState("");
+  const [generateCount, setGenerateCount] = useState(15);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     setEditName(selectedDeck?.name ?? "");
     setEditDescription(selectedDeck?.description ?? "");
-    setCardPrompt("");
   }, [selectedDeck?.id, selectedDeck?.name, selectedDeck?.description]);
 
   const handleCreateDeck = async (event: FormEvent<HTMLFormElement>) => {
@@ -47,17 +54,14 @@ export function DecksPanel(): JSX.Element {
       await createDeck({ name: newDeckName.trim(), description: newDeckDescription.trim() || null });
       setNewDeckName("");
       setNewDeckDescription("");
+      setView("edit");
     } catch (error) {
       console.error("Не удалось создать колоду", error);
     }
   };
 
-  const handleUpdateDeck = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!selectedDeck) {
-      return;
-    }
-    if (!editName.trim()) {
+  const handleUpdateDeck = async () => {
+    if (!selectedDeck || !editName.trim()) {
       return;
     }
     try {
@@ -68,7 +72,7 @@ export function DecksPanel(): JSX.Element {
   };
 
   const handleDeleteDeck = async () => {
-    if (!selectedDeck) {
+    if (!selectedDeck || !confirm(`Удалить колоду "${selectedDeck.name}"?`)) {
       return;
     }
     try {
@@ -91,41 +95,35 @@ export function DecksPanel(): JSX.Element {
     }
   };
 
-  return (
-    <div className={styles.panel}>
-      <section className={styles.section}>
-        <header>
-          <h2>Колоды</h2>
-          <p className={styles.muted}>Собирай слова в тематические подборки для точечной πρακτική.</p>
-        </header>
-        {deckError && <p className={styles.error}>{deckError}</p>}
-        {isLoadingDecks ? (
-          <p className={styles.muted}>Загружаем колоды…</p>
-        ) : decks.length === 0 ? (
-          <p className={styles.emptyState}>Начни с первой колоды.</p>
-        ) : (
-          <div className={styles.deckList}>
-            {decks.map((deck) => (
-              <button
-                key={deck.id}
-                type="button"
-                className={`${styles.deckButton} ${deck.id === selectedDeckId ? styles.deckButtonActive : ""}`}
-                onClick={() => selectDeck(deck.id)}
-              >
-                <strong>{deck.name}</strong>
-                {deck.description && <p className={styles.muted}>{deck.description}</p>}
-                <div className={styles.deckMeta}>
-                  <span>{deck.card_count} карточек</span>
-                  <span>{deck.due_count} к повторению</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-        <hr className={styles.spacer} />
-        <form className={styles.form} onSubmit={handleCreateDeck}>
-          <h3>Создать колоду</h3>
-          <div className={styles.formGroup}>
+  const handleGenerateCards = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedDeck || !generatePrompt.trim()) {
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      await generateDeckCards(selectedDeck.id, generatePrompt.trim(), generateCount);
+      setGeneratePrompt("");
+      // Refresh cards to show newly generated ones
+      await refreshCards(selectedDeck.id);
+    } catch (error) {
+      console.error("Не удалось сгенерировать карточки", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  if (view === "create") {
+    return (
+      <div className={styles.panel}>
+        <div className={styles.header}>
+          <button className={styles.backButton} onClick={() => setView("edit")}>← Назад</button>
+          <h2>Создать новую колоду</h2>
+        </div>
+
+        <form className={styles.createForm} onSubmit={handleCreateDeck}>
+          <div className={styles.formRow}>
             <label htmlFor="new-deck-name">Название</label>
             <input
               id="new-deck-name"
@@ -136,126 +134,159 @@ export function DecksPanel(): JSX.Element {
               required
             />
           </div>
-          <div className={styles.formGroup}>
+          <div className={styles.formRow}>
             <label htmlFor="new-deck-description">Описание</label>
             <textarea
               id="new-deck-description"
               className={styles.textarea}
               value={newDeckDescription}
               onChange={(event) => setNewDeckDescription(event.target.value)}
-              placeholder="Фразы для πρωινό καφέ и новых знакомых."
+              placeholder="Фразы для πρωινό καφέ"
+              rows={3}
             />
           </div>
-          <div className={styles.actions}>
-            <button className={styles.primaryButton} type="submit" disabled={isSavingDeck}>
-              {isSavingDeck ? "Создаём…" : "Добавить колоду"}
+          <button className={styles.primaryButton} type="submit" disabled={isSavingDeck}>
+            {isSavingDeck ? "Создаём…" : "Создать колоду"}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.panel}>
+      <div className={styles.header}>
+        <h2>Колоды</h2>
+      </div>
+
+      {deckError && <p className={styles.error}>{deckError}</p>}
+
+      <div className={styles.deckSelector}>
+        <label htmlFor="deck-select">Колода:</label>
+        <select
+          id="deck-select"
+          className={styles.deckSelect}
+          value={selectedDeckId ?? ""}
+          onChange={(e) => selectDeck(e.target.value ? Number(e.target.value) : null)}
+          disabled={isLoadingDecks}
+        >
+          {decks.length === 0 && <option value="">Нет колод</option>}
+          {decks.map((deck) => (
+            <option key={deck.id} value={deck.id}>
+              {deck.name} ({deck.card_count})
+            </option>
+          ))}
+        </select>
+        <button className={styles.createButton} onClick={() => setView("create")}>
+          + Создать
+        </button>
+      </div>
+
+      {selectedDeck && (
+        <>
+          <div className={styles.deckInfo}>
+            <div className={styles.formRow}>
+              <label htmlFor="deck-name">Название</label>
+              <input
+                id="deck-name"
+                className={styles.inputCompact}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={() => void handleUpdateDeck()}
+              />
+            </div>
+            <div className={styles.formRow}>
+              <label htmlFor="deck-description">Описание</label>
+              <textarea
+                id="deck-description"
+                className={styles.textareaCompact}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                onBlur={() => void handleUpdateDeck()}
+                rows={2}
+              />
+            </div>
+            <button className={styles.deleteButton} onClick={() => void handleDeleteDeck()}>
+              Удалить колоду
             </button>
           </div>
-        </form>
-      </section>
 
-      <section className={styles.section}>
-        <header>
-          <h2>Детали колоды</h2>
-          <p className={styles.muted}>Генерируй карточки через ИИ, обновляй описания и очищай устаревшие записи.</p>
-        </header>
-        {selectedDeck ? (
-          <>
-            <form className={styles.form} onSubmit={handleUpdateDeck}>
-              <div className={styles.formGroup}>
-                <label htmlFor="deck-name">Название</label>
-                <input
-                  id="deck-name"
-                  className={styles.input}
-                  value={editName}
-                  onChange={(event) => setEditName(event.target.value)}
-                  required
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label htmlFor="deck-description">Описание</label>
-                <textarea
-                  id="deck-description"
-                  className={styles.textarea}
-                  value={editDescription}
-                  onChange={(event) => setEditDescription(event.target.value)}
-                  placeholder="Добавь контекст, например любимый καφές или настроение."
-                />
-              </div>
-              <div className={styles.actions}>
-                <button className={styles.primaryButton} type="submit" disabled={isSavingDeck}>
-                  {isSavingDeck ? "Сохраняем…" : "Сохранить изменения"}
-                </button>
-                <button className={styles.dangerButton} type="button" onClick={() => void handleDeleteDeck()} disabled={isSavingDeck}>
-                  Удалить колоду
-                </button>
-              </div>
+          <div className={styles.cardActions}>
+            <form className={styles.addCardForm} onSubmit={handleCreateCard}>
+              <input
+                className={styles.inputCompact}
+                value={cardPrompt}
+                onChange={(e) => setCardPrompt(e.target.value)}
+                placeholder="καλημέρα / доброе утро"
+              />
+              <button className={styles.addButton} type="submit" disabled={isSavingCard}>
+                {isSavingCard ? "..." : "+ Добавить"}
+              </button>
             </form>
 
-            <hr className={styles.spacer} />
-
-            <form className={styles.form} onSubmit={handleCreateCard}>
-              <h3>Создать карточку</h3>
-              <div className={styles.formGroup}>
-                <label htmlFor="card-prompt">Слово или фраза (русский или ελληνικά)</label>
-                <input
-                  id="card-prompt"
-                  className={styles.input}
-                  value={cardPrompt}
-                  onChange={(event) => setCardPrompt(event.target.value)}
-                  placeholder="καλημέρα / доброе утро"
-                  required
-                />
-              </div>
-              <div className={styles.actions}>
-                <button className={styles.primaryButton} type="submit" disabled={isSavingCard}>
-                  {isSavingCard ? "Генерируем…" : "Сгенерировать карточку"}
-                </button>
-              </div>
+            <form className={styles.generateForm} onSubmit={handleGenerateCards}>
+              <input
+                className={styles.inputCompact}
+                value={generatePrompt}
+                onChange={(e) => setGeneratePrompt(e.target.value)}
+                placeholder="Промпт для генерации: еда, путешествия..."
+              />
+              <input
+                type="number"
+                className={styles.countInput}
+                value={generateCount}
+                onChange={(e) => setGenerateCount(Number(e.target.value))}
+                min={5}
+                max={30}
+              />
+              <button className={styles.generateButton} type="submit" disabled={isGenerating}>
+                {isGenerating ? "Генерируем..." : "✨ Сгенерировать"}
+              </button>
             </form>
+          </div>
 
-            {cardError && <p className={styles.error}>{cardError}</p>}
-            {isLoadingCards ? (
-              <p className={styles.muted}>Загружаем карточки…</p>
-            ) : cards.length === 0 ? (
-              <p className={styles.emptyState}>Добавь слово, чтобы заполнить колоду.</p>
-            ) : (
-              <div className={styles.cardList}>
-                {cards.map((card) => (
-                  <article key={card.user_card_id} className={styles.cardItem}>
-                    <div className={styles.cardHeader}>
-                      <strong>{card.card.target_text}</strong>
-                      <button
-                        type="button"
-                        className={styles.secondaryButton}
-                        disabled={isSavingCard}
-                        onClick={async () => {
-                          try {
-                            await removeCard(card.deck_id, card.user_card_id);
-                          } catch (error) {
-                            console.error("Не удалось удалить карточку", error);
-                          }
-                        }}
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                    <div className={styles.cardExample}>
-                      <p>
-                        <em>{card.card.source_text}</em> · {card.card.part_of_speech ?? "—"}
-                      </p>
-                      <p>{card.card.example_sentence}</p>
-                      <p className={styles.muted}>{card.card.example_translation}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </>
-        ) : (
-          <p className={styles.emptyState}>Выбери колоду, чтобы редактировать детали.</p>
-        )}
-      </section>
+          {cardError && <p className={styles.error}>{cardError}</p>}
+
+          {isLoadingCards ? (
+            <p className={styles.muted}>Загружаем карточки…</p>
+          ) : cards.length === 0 ? (
+            <p className={styles.emptyState}>Добавь слово или сгенерируй карточки</p>
+          ) : (
+            <div className={styles.cardList}>
+              {cards.map((card) => (
+                <article key={card.user_card_id} className={styles.cardItem}>
+                  <div className={styles.cardTop}>
+                    <strong>{card.card.target_text}</strong>
+                    <span className={styles.pos}>{card.card.part_of_speech ?? "—"}</span>
+                    <button
+                      className={styles.removeButton}
+                      onClick={() => void removeCard(card.deck_id, card.user_card_id)}
+                      disabled={isSavingCard}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className={styles.cardDetails}>
+                    <p><em>{card.card.source_text}</em></p>
+                    <p className={styles.example}>{card.card.example_sentence}</p>
+                    <p className={styles.exampleTranslation}>{card.card.example_translation}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {!selectedDeck && decks.length === 0 && (
+        <div className={styles.emptyState}>
+          <p>Создайте первую колоду, чтобы начать</p>
+        </div>
+      )}
+
+      <div className={styles.footer}>
+        <p>Собирай слова в тематические подборки для точечной πρακτική</p>
+      </div>
     </div>
   );
 }

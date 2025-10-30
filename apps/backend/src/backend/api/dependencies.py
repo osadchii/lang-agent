@@ -9,7 +9,7 @@ from fastapi import Header, HTTPException, status
 
 from ..config import AppConfig
 from ..services.flashcards import FlashcardService, UserProfile
-from ..services.llm import OpenAIFlashcardGenerator
+from ..services.llm import OpenAIChatClient, OpenAIFlashcardGenerator
 from ..services.storage.database import Database
 from ..services.telegram_auth import TelegramAuthError, parse_telegram_user
 
@@ -34,9 +34,15 @@ def build_container() -> APIContainer:
         api_key=config.openai_api_key,
         model=config.openai_model,
     )
+    llm_client = OpenAIChatClient(
+        api_key=config.openai_api_key,
+        model=config.openai_model,
+        system_prompt="You are a helpful assistant for generating Modern Greek vocabulary for Russian-speaking learners.",
+    )
     flashcards = FlashcardService(
         database=database,
         generator=generator,
+        llm=llm_client,
     )
     return APIContainer(config=config, database=database, flashcards=flashcards)
 

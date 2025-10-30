@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select
 
 from backend.services.flashcards import FlashcardService, ReviewRating, UserProfile
-from backend.services.llm import FlashcardContent, FlashcardGenerator
+from backend.services.llm import FlashcardContent, FlashcardGenerator, LLMClient
 from backend.services.storage.database import Database
 from backend.services.storage.models import CardRecord, DeckRecord, UserCardRecord
 
@@ -32,6 +32,22 @@ class StubFlashcardGenerator(FlashcardGenerator):
         )
 
 
+class StubLLMClient(LLMClient):
+    """Deterministic LLM client for tests."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def generate_reply(
+        self,
+        *,
+        user_message: str,
+        history = None,
+    ) -> str:
+        self.calls.append(user_message)
+        return "καλημέρα\nφαγητό\nταξίδι"
+
+
 @pytest.mark.asyncio
 async def test_add_words_creates_cards_and_links_user(tmp_path) -> None:
     """Adding words should create canonical cards and user-specific links."""
@@ -39,9 +55,11 @@ async def test_add_words_creates_cards_and_links_user(tmp_path) -> None:
     await database.initialize()
 
     generator = StubFlashcardGenerator()
+    llm_client = StubLLMClient()
     service = FlashcardService(
         database=database,
         generator=generator,
+        llm=llm_client,
         random_source=random.Random(0),
     )
 
@@ -81,9 +99,11 @@ async def test_add_words_reuses_existing_cards(tmp_path) -> None:
     await database.initialize()
 
     generator = StubFlashcardGenerator()
+    llm_client = StubLLMClient()
     service = FlashcardService(
         database=database,
         generator=generator,
+        llm=llm_client,
         random_source=random.Random(1),
     )
 
@@ -107,9 +127,11 @@ async def test_review_schedule_updates_interval(tmp_path) -> None:
     await database.initialize()
 
     generator = StubFlashcardGenerator()
+    llm_client = StubLLMClient()
     service = FlashcardService(
         database=database,
         generator=generator,
+        llm=llm_client,
         random_source=random.Random(2),
     )
 
@@ -148,9 +170,11 @@ async def test_deck_crud_and_card_generation(tmp_path) -> None:
     await database.initialize()
 
     generator = StubFlashcardGenerator()
+    llm_client = StubLLMClient()
     service = FlashcardService(
         database=database,
         generator=generator,
+        llm=llm_client,
         random_source=random.Random(3),
     )
 

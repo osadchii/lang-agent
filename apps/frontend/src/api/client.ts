@@ -182,6 +182,17 @@ export async function removeDeckCard(deckId: number, userCardId: number): Promis
   });
 }
 
+export async function generateDeckCards(
+  deckId: number,
+  prompt: string,
+  count: number = 15
+): Promise<FlashcardCreationResponse[]> {
+  return request<FlashcardCreationResponse[]>(`/decks/${deckId}/generate`, {
+    method: "POST",
+    body: JSON.stringify({ prompt, count })
+  });
+}
+
 export async function fetchNextTrainingCard(deckId?: number | null): Promise<TrainingCard | null> {
   const params = deckId ? `?deck_id=${deckId}` : "";
   const card = await request<TrainingCard | undefined>(`/training/next${params}`);

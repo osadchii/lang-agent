@@ -10,7 +10,7 @@ from typing import Sequence
 
 from sqlalchemy.orm import selectinload
 
-from .llm import FlashcardContent, FlashcardGenerator
+from .llm import FlashcardContent, FlashcardGenerator, LLMClient
 from .storage.database import Database
 from .storage.models import DeckRecord, UserCardRecord
 from .storage.repositories import FlashcardRepository, UserRepository
@@ -105,12 +105,14 @@ class FlashcardService:
         *,
         database: Database,
         generator: FlashcardGenerator,
+        llm: LLMClient,
         flashcard_repository: FlashcardRepository | None = None,
         user_repository: UserRepository | None = None,
         random_source: random.Random | None = None,
     ) -> None:
         self._database = database
         self._generator = generator
+        self._llm = llm
         self._flashcards = flashcard_repository or FlashcardRepository()
         self._users = user_repository or UserRepository()
         self._random = random_source or random.Random()
@@ -498,6 +500,63 @@ class FlashcardService:
                 user_card_id=user_card_id,
             )
             await session.commit()
+
+    async def generate_cards_for_deck(
+        self,
+        profile: UserProfile,
+        *,
+        deck_id: int,
+        prompt: str,
+        count: int = 15,
+    ) -> list[FlashcardCreationResult]:
+        """Generate multiple flashcards via LLM based on prompt and add to deck."""
+        cleaned_prompt = prompt.strip()
+        if not cleaned_prompt:
+            raise ValueError("Промпт не может быть пустым.")
+
+        # Generate a list of words/phrases based on the prompt using LLM
+        generation_prompt = (
+            f"You are a Modern Greek language teacher for Russian-speaking students.\n"
+            f"Generate exactly {count} useful Modern Greek words or short phrases related to the topic: '{cleaned_prompt}'.\n"
+            f"These words should be practical and commonly used in everyday Greek.\n"
+            f"Focus on variety: include nouns, verbs, adjectives, and useful expressions.\n"
+            f"Return ONLY the Greek words (in Greek alphabet), one per line.\n"
+            f"Do NOT include:\n"
+            f"- Translations\n"
+            f"- Numbering\n"
+            f"- Latin transliterations\n"
+            f"- Any explanations or additional text\n"
+            f"Example output format:\n"
+            f"καλημέρα\n"
+            f"φαγητό\n"
+            f"ταξίδι"
+        )
+
+        # Use the LLM client to generate words
+        response = await self._llm.generate_reply(user_message=generation_prompt)
+        words = [line.strip() for line in response.strip().split('\n') if line.strip()]
+
+        # Limit to requested count
+        words = words[:count]
+
+        if not words:
+            raise ValueError("Не удалось сгенерировать слова.")
+
+        # Generate flashcards for each word
+        results: list[FlashcardCreationResult] = []
+        for word in words:
+            try:
+                result = await self.create_card_for_deck(
+                    profile,
+                    deck_id=deck_id,
+                    prompt_text=word,
+                )
+                results.append(result)
+            except Exception:
+                # Skip words that fail, but continue with others
+                continue
+
+        return results
 
     async def _get_or_create_user(self, session, profile: UserProfile):
         """Ensure a user record exists and return it."""

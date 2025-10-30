@@ -70,6 +70,13 @@ class CreateCardRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
 
 
+class GenerateCardsRequest(BaseModel):
+    """Payload for generating multiple cards via LLM."""
+
+    prompt: str = Field(..., min_length=1, description="Description of what words to generate")
+    count: int = Field(default=15, ge=5, le=30, description="Number of cards to generate")
+
+
 class FlashcardCreationResponse(BaseModel):
     """Result of a card creation attempt."""
 

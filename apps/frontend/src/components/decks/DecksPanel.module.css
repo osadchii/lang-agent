@@ -1,108 +1,362 @@
 .panel {
+  background: var(--surface-glass);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px 20px 0 0;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  color: var(--text-primary);
-}
-
-.section {
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 16px;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  gap: 0.6rem;
   box-shadow: var(--shadow-subtle);
+  backdrop-filter: blur(26px);
+  color: var(--text-primary);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-.section h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.header h2 {
   margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-.deckList {
+.backButton {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 143, 61, 0.3);
+  background: rgba(12, 26, 56, 0.6);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backButton:hover {
+  border-color: rgba(255, 143, 61, 0.5);
+  background: rgba(12, 26, 56, 0.8);
+}
+
+.deckSelector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.deckSelector label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.deckSelect {
+  flex: 1;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 143, 61, 0.3);
+  background: rgba(12, 26, 56, 0.6);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.deckSelect:hover:not(:disabled) {
+  border-color: rgba(255, 143, 61, 0.5);
+  background: rgba(12, 26, 56, 0.8);
+}
+
+.deckSelect:focus {
+  border-color: rgba(255, 143, 61, 0.7);
+}
+
+.deckSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.createButton {
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 143, 61, 0.5);
+  background: linear-gradient(135deg, rgba(255, 143, 61, 0.2), rgba(255, 143, 61, 0.1));
+  color: rgba(255, 189, 125, 0.96);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.createButton:hover {
+  border-color: rgba(255, 143, 61, 0.7);
+  background: linear-gradient(135deg, rgba(255, 143, 61, 0.3), rgba(255, 143, 61, 0.15));
+}
+
+.deckInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border-radius: 12px;
+  background: rgba(11, 28, 63, 0.5);
+  border: 1px solid rgba(255, 143, 61, 0.15);
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.formRow label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(228, 220, 248, 0.8);
+}
+
+.inputCompact,
+.textareaCompact {
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 143, 61, 0.25);
+  background: rgba(12, 26, 56, 0.6);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.inputCompact:focus,
+.textareaCompact:focus {
+  border-color: rgba(255, 143, 61, 0.5);
+  background: rgba(12, 26, 56, 0.8);
+}
+
+.textareaCompact {
+  resize: vertical;
+  min-height: 50px;
+}
+
+.deleteButton {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 105, 141, 0.4);
+  background: rgba(189, 62, 96, 0.15);
+  color: rgba(255, 175, 192, 0.9);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.deleteButton:hover {
+  border-color: rgba(255, 105, 141, 0.6);
+  background: rgba(189, 62, 96, 0.25);
+}
+
+.cardActions {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.deckButton {
-  background: var(--surface-background);
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 0.75rem;
-  text-align: left;
-  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-  color: var(--text-primary);
-}
-
-.deckButton:hover {
-  border-color: var(--border-subtle);
-  background: #ffffff;
-  box-shadow: 0 8px 18px rgba(16, 37, 66, 0.08);
-  color: #1a1a2e;
-}
-
-.deckButton:hover .muted {
-  color: rgba(26, 26, 46, 0.6);
-}
-
-.deckButtonActive {
-  border-color: rgba(15, 106, 180, 0.3);
-  background: #ffffff;
-  box-shadow: 0 10px 24px rgba(15, 106, 180, 0.14);
-  color: #1a1a2e;
-}
-
-.deckButtonActive .muted {
-  color: rgba(26, 26, 46, 0.6);
-}
-
-.deckMeta {
-  margin-top: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+.addCardForm,
+.generateForm {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.4rem;
+  align-items: center;
 }
 
-.formGroup {
+.addButton,
+.generateButton {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 143, 61, 0.5);
+  background: linear-gradient(135deg, rgba(255, 143, 61, 0.2), rgba(255, 143, 61, 0.1));
+  color: rgba(255, 189, 125, 0.96);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.addButton:hover,
+.generateButton:hover {
+  border-color: rgba(255, 143, 61, 0.7);
+  background: linear-gradient(135deg, rgba(255, 143, 61, 0.3), rgba(255, 143, 61, 0.15));
+}
+
+.addButton:disabled,
+.generateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.countInput {
+  width: 60px;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 143, 61, 0.25);
+  background: rgba(12, 26, 56, 0.6);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  text-align: center;
+  outline: none;
+}
+
+.cardList {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.3rem;
 }
 
-.formGroup label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+.cardList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cardList::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.cardList::-webkit-scrollbar-thumb {
+  background: rgba(255, 143, 61, 0.4);
+  border-radius: 2px;
+}
+
+.cardItem {
+  padding: 0.6rem;
+  border-radius: 10px;
+  background: rgba(11, 28, 63, 0.5);
+  border: 1px solid rgba(255, 143, 61, 0.15);
+  transition: all 0.2s ease;
+}
+
+.cardItem:hover {
+  border-color: rgba(255, 143, 61, 0.3);
+  background: rgba(11, 28, 63, 0.7);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.cardTop strong {
+  font-size: 0.9rem;
+  color: rgba(255, 239, 220, 0.95);
+  flex: 1;
+}
+
+.pos {
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(12, 33, 71, 0.7);
+  border: 1px solid rgba(255, 189, 125, 0.3);
+  color: rgba(255, 239, 220, 0.85);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.removeButton {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 105, 141, 0.4);
+  background: rgba(189, 62, 96, 0.15);
+  color: rgba(255, 175, 192, 0.9);
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.removeButton:hover {
+  border-color: rgba(255, 105, 141, 0.6);
+  background: rgba(189, 62, 96, 0.25);
+}
+
+.removeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cardDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cardDetails p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(228, 220, 248, 0.75);
+  line-height: 1.4;
+}
+
+.cardDetails em {
+  color: rgba(255, 239, 220, 0.9);
+  font-style: italic;
+}
+
+.example {
+  color: rgba(228, 220, 248, 0.85) !important;
+  font-size: 0.8rem !important;
+}
+
+.exampleTranslation {
+  color: rgba(228, 220, 248, 0.65) !important;
+  font-size: 0.75rem !important;
+}
+
+.createForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1rem;
 }
 
 .input,
 .textarea {
-  background: #ffffff;
+  padding: 0.6rem 0.8rem;
   border-radius: 10px;
-  border: 1px solid var(--border-subtle);
-  padding: 0.6rem 0.75rem;
-  color: #1a1a2e;
-  font: inherit;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.input::placeholder,
-.textarea::placeholder {
-  color: rgba(26, 26, 46, 0.5);
+  border: 1px solid rgba(255, 143, 61, 0.3);
+  background: rgba(12, 26, 56, 0.6);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
 
 .input:focus,
 .textarea:focus {
-  outline: none;
-  border-color: rgba(31, 184, 209, 0.45);
-  box-shadow: var(--focus-ring);
+  border-color: rgba(255, 143, 61, 0.5);
+  background: rgba(12, 26, 56, 0.8);
 }
 
 .textarea {
@@ -110,123 +364,62 @@
   min-height: 80px;
 }
 
-.actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.primaryButton,
-.secondaryButton,
-.dangerButton {
-  border-radius: 999px;
-  padding: 0.65rem 1.1rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-}
-
 .primaryButton {
-  background: linear-gradient(135deg, #0f6ab4 0%, #36d6c8 100%);
-  color: #ffffff;
+  padding: 0.7rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 143, 61, 0.5);
+  background: linear-gradient(135deg, #FF8F3D 0%, #FF7043 100%);
+  color: #0a0412;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(255, 143, 61, 0.3);
 }
 
 .primaryButton:hover {
   transform: translateY(-1px);
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 8px 24px rgba(255, 143, 61, 0.4);
 }
 
-.dangerButton {
-  background: #fee8eb;
-  color: #8f1e35;
-  border: 1px solid rgba(188, 46, 65, 0.2);
-}
-
-.secondaryButton {
-  background: var(--accent-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-}
-
-.secondaryButton:hover,
-.dangerButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(16, 37, 66, 0.1);
-}
-
-.primaryButton:disabled,
-.secondaryButton:disabled,
-.dangerButton:disabled {
-  opacity: 0.55;
+.primaryButton:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
 }
 
-.cardList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.footer {
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 143, 61, 0.1);
+  margin-top: auto;
 }
 
-.cardItem {
-  border: 1px solid var(--border-subtle);
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  box-shadow: 0 12px 24px rgba(16, 37, 66, 0.08);
-  color: #1a1a2e;
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-}
-
-.cardHeader strong {
-  font-size: 1rem;
-  color: #1a1a2e;
-}
-
-.cardExample {
-  font-size: 0.9rem;
-  line-height: 1.45;
-  color: rgba(26, 26, 46, 0.75);
-}
-
-.cardItem .muted {
-  color: rgba(26, 26, 46, 0.6);
-}
-
-.emptyState,
-.error {
-  font-size: 0.9rem;
+.footer p {
+  margin: 0;
+  font-size: 0.72rem;
   color: var(--text-secondary);
+  line-height: 1.35;
+  text-align: center;
+  opacity: 0.85;
 }
 
 .error {
-  color: rgba(188, 46, 65, 0.9);
+  font-size: 0.85rem;
+  color: rgba(255, 118, 118, 0.95);
+  margin: 0;
 }
 
 .muted {
-  color: var(--text-muted);
   font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
 }
 
-.spacer {
-  border: none;
-  border-top: 1px solid var(--border-subtle);
-  margin: 0.75rem 0;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.emptyState {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
 }

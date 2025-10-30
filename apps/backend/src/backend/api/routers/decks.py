@@ -188,6 +188,36 @@ async def remove_card_from_deck(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post(
+    "/{deck_id}/generate",
+    response_model=list[schemas.FlashcardCreationResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_cards_for_deck(
+    deck_id: int,
+    payload: schemas.GenerateCardsRequest,
+    profile: UserProfile = Depends(get_user_profile),
+    flashcards: FlashcardService = Depends(get_flashcard_service),
+) -> list[schemas.FlashcardCreationResponse]:
+    """Generate multiple cards via LLM and add them to the deck."""
+    try:
+        results = await flashcards.generate_cards_for_deck(
+            profile,
+            deck_id=deck_id,
+            prompt=payload.prompt,
+            count=payload.count,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось сгенерировать карточки."
+        ) from exc
+
+    return [_to_creation_response(result) for result in results]
+
+
 def _to_creation_response(result: FlashcardCreationResult) -> schemas.FlashcardCreationResponse:
     """Convert the creation result into a response payload."""
     if result.card is None or result.user_card_id is None:

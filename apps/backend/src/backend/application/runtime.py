@@ -52,6 +52,7 @@ def bootstrap() -> BotApp:
     flashcards = FlashcardService(
         database=database,
         generator=flashcard_generator,
+        llm=llm_client,
     )
     telegram_bot = TelegramBotRunner(
         token=config.telegram_bot_token,

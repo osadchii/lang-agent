@@ -11,6 +11,7 @@
 - Maintain clear boundaries between core language-learning logic, infrastructure (storage, messaging, integrations), and user interface layers to simplify iteration.
 - Keep backend code inside `apps/backend` and future mini app code inside `apps/frontend`, sharing only explicit domain contracts and DTOs.
 - Structure frontend components as composable, theme-aware building blocks with co-located styles and tests to keep the UI layer maintainable.
+- **Design all frontend UI for Telegram Mini App first and foremost**: prioritize mobile viewport optimization (320px-520px width), touch-friendly interactions, and minimal scrolling; desktop is secondary. Avoid fixed heights that cause content jumping or internal scrollbars; use flexible layouts with min-height instead.
 
 ## Process And Collaboration
 - Update `README.md`, `.env`, and `.env.example` with every change that affects setup, configuration, or usage; keep setup instructions reproducible end-to-end.

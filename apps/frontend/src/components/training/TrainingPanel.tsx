@@ -27,10 +27,11 @@ function translatePartOfSpeech(pos: string | null): string {
 export function TrainingPanel(): JSX.Element {
   const { currentCard, isLoading, isSubmitting, error, selectedDeckId, setSelectedDeckId, loadNextCard, reviewCard } =
     useTrainingSession();
-  const { decks } = useDeckManager();
+  const { decks, refreshDecks } = useDeckManager();
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [hasFlippedOnce, setHasFlippedOnce] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     void loadNextCard();
@@ -38,8 +39,11 @@ export function TrainingPanel(): JSX.Element {
 
   // Reset flip state when card changes
   useEffect(() => {
-    setIsFlipped(false);
-    setHasFlippedOnce(false);
+    if (currentCard) {
+      setIsFlipped(false);
+      setHasFlippedOnce(false);
+      setIsTransitioning(false);
+    }
   }, [currentCard?.user_card_id]);
 
   const handleFlipCard = () => {
@@ -55,8 +59,29 @@ export function TrainingPanel(): JSX.Element {
     setSelectedDeckId(newDeckId);
   };
 
+  const handleReview = async (rating: "again" | "review" | "easy") => {
+    if (!currentCard || isSubmitting) return;
+
+    // Start transition: flip card back if it's flipped
+    setIsTransitioning(true);
+    if (isFlipped) {
+      setIsFlipped(false);
+      // Wait for flip animation to complete
+      await new Promise(resolve => setTimeout(resolve, 600));
+    }
+
+    // Fade out
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Submit review and load next card
+    await reviewCard(rating);
+
+    // Reload decks to update counters
+    await refreshDecks();
+  };
+
   const hasCard = Boolean(currentCard);
-  const canReview = hasCard && hasFlippedOnce && !isSubmitting;
+  const canReview = hasCard && hasFlippedOnce && !isSubmitting && !isTransitioning;
 
   // Determine what to show on each side based on prompt_side
   const frontText = currentCard?.prompt ?? "";
@@ -102,7 +127,7 @@ export function TrainingPanel(): JSX.Element {
 
       {hasCard && currentCard && (
         <div className={styles.cardLayout}>
-          <div className={`${styles.cardContainer} ${isFlipped ? styles.flipped : ""}`}>
+          <div className={`${styles.cardContainer} ${isFlipped ? styles.flipped : ""} ${isTransitioning ? styles.transitioning : ""}`}>
             <article className={`${styles.cardShell} ${styles.cardFront}`}>
               <header className={styles.cardHeader}>
                 <h3>{currentCard.deck_name}</h3>
@@ -165,13 +190,13 @@ export function TrainingPanel(): JSX.Element {
           </div>
 
           <div className={styles.actions}>
-            <button className={styles.againButton} disabled={!canReview} onClick={() => void reviewCard("again")}>
+            <button className={styles.againButton} disabled={!canReview} onClick={() => void handleReview("again")}>
               Еще раз
             </button>
-            <button className={styles.reviewButton} disabled={!canReview} onClick={() => void reviewCard("review")}>
+            <button className={styles.reviewButton} disabled={!canReview} onClick={() => void handleReview("review")}>
               Повторить
             </button>
-            <button className={styles.easyButton} disabled={!canReview} onClick={() => void reviewCard("easy")}>
+            <button className={styles.easyButton} disabled={!canReview} onClick={() => void handleReview("easy")}>
               Легко
             </button>
           </div>

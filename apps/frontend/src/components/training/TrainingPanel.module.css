@@ -90,6 +90,8 @@
   height: 280px;
   perspective: 1000px;
   flex-shrink: 0;
+  animation: cardFadeIn 0.4s ease-out;
+  transition: opacity 0.3s ease-out;
 }
 
 .cardShell {
@@ -124,6 +126,22 @@
 
 .cardContainer.flipped .cardBack {
   transform: rotateY(360deg);
+}
+
+.cardContainer.transitioning {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .cardShell::before {

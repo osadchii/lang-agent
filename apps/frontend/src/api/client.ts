@@ -1,3 +1,5 @@
+import { getTelegramUser, getTelegramWebApp } from "@utils/telegram";
+
 import type {
   DeckCard,
   DeckSummary,
@@ -33,26 +35,38 @@ function isValidValue(value: string | undefined): boolean {
   return trimmed.length > 0;
 }
 
+// Try to get user data from Telegram WebApp first, then fall back to config/env
+const telegramUser = getTelegramUser();
+
 const API_BASE_URL =
   (isValidValue(runtimeConfig.apiBaseUrl) ? runtimeConfig.apiBaseUrl!.trim() : null) ||
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:8000/api";
-const USER_ID = Number.parseInt(
-  (isValidValue(runtimeConfig.userId) ? runtimeConfig.userId! : null) ?? import.meta.env.VITE_USER_ID ?? "1",
-  10
-);
-const USERNAME =
-  (isValidValue(runtimeConfig.userUsername) ? runtimeConfig.userUsername! : null) ??
-  import.meta.env.VITE_USER_USERNAME ??
-  "";
-const USER_FIRST_NAME =
-  (isValidValue(runtimeConfig.userFirstName) ? runtimeConfig.userFirstName! : null) ??
-  import.meta.env.VITE_USER_FIRST_NAME ??
-  "";
-const USER_LAST_NAME =
-  (isValidValue(runtimeConfig.userLastName) ? runtimeConfig.userLastName! : null) ??
-  import.meta.env.VITE_USER_LAST_NAME ??
-  "";
+
+const USER_ID = telegramUser
+  ? telegramUser.id
+  : Number.parseInt(
+      (isValidValue(runtimeConfig.userId) ? runtimeConfig.userId! : null) ?? import.meta.env.VITE_USER_ID ?? "1",
+      10
+    );
+
+const USERNAME = telegramUser
+  ? telegramUser.username ?? ""
+  : (isValidValue(runtimeConfig.userUsername) ? runtimeConfig.userUsername! : null) ??
+    import.meta.env.VITE_USER_USERNAME ??
+    "";
+
+const USER_FIRST_NAME = telegramUser
+  ? telegramUser.first_name
+  : (isValidValue(runtimeConfig.userFirstName) ? runtimeConfig.userFirstName! : null) ??
+    import.meta.env.VITE_USER_FIRST_NAME ??
+    "";
+
+const USER_LAST_NAME = telegramUser
+  ? telegramUser.last_name ?? ""
+  : (isValidValue(runtimeConfig.userLastName) ? runtimeConfig.userLastName! : null) ??
+    import.meta.env.VITE_USER_LAST_NAME ??
+    "";
 
 const AUTH_HEADER_VALUES: Record<string, string> = {
   "X-User-Id": Number.isNaN(USER_ID) ? "1" : String(USER_ID)
@@ -70,9 +84,17 @@ if (USER_LAST_NAME) {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
+
   if (!options.skipAuthHeaders) {
-    for (const [key, value] of Object.entries(AUTH_HEADER_VALUES)) {
-      headers.set(key, value);
+    // Try to send Telegram initData for secure authentication
+    const webApp = getTelegramWebApp();
+    if (webApp && webApp.initData) {
+      headers.set("Telegram-Init-Data", webApp.initData);
+    } else {
+      // Fallback to header-based auth for local development
+      for (const [key, value] of Object.entries(AUTH_HEADER_VALUES)) {
+        headers.set(key, value);
+      }
     }
   }
 

@@ -56,8 +56,16 @@ docs/adr/         Architectural decision records
 ### Frontend (React)
 1. Install Node.js 18.18+ and npm 9+.
 2. From `apps/frontend/`, install deps: `npm install`.
-3. Copy the root `.env.example` values for `VITE_API_BASE_URL`, `VITE_USER_ID`, and related headers into `apps/frontend/.env.local` (or `.env`) so the browser can authenticate requests.
+3. Copy the root `.env.example` values for `VITE_API_BASE_URL`, `VITE_USER_ID`, and related headers into the root `.env` file so the browser can authenticate requests during local development.
 4. Start dev server: `npm run dev` (served at `http://localhost:5173`).
+
+#### Telegram Mini App Integration
+The frontend automatically detects when running inside Telegram and extracts user context from the Telegram WebApp API:
+- **Production (Telegram)**: User ID, username, and profile data are automatically extracted from `window.Telegram.WebApp.initDataUnsafe`.
+- **Local development**: Uses `VITE_USER_ID`, `VITE_USER_USERNAME`, etc. from `.env` for testing without Telegram.
+- **Standalone web**: Falls back to runtime-config placeholders or demo user values.
+
+See `docs/adr/0002-telegram-webapp-user-context.md` for implementation details.
 
 ## Running Locally
 - Backend CLI: `python -m backend.cli` (or `make backend-dev`).
@@ -69,7 +77,10 @@ docs/adr/         Architectural decision records
 
 ### HTTP API
 - Base URL: `http://localhost:8000/api` (configure via `VITE_API_BASE_URL` for the mini app).
-- Authentication: pass learner context via headers — at minimum `X-User-Id`. Optional headers (`X-User-Username`, `X-User-First-Name`, `X-User-Last-Name`) hydrate profile data without touching Telegram.
+- **Authentication**: Two modes depending on `REQUIRE_TELEGRAM_AUTH`:
+  - **Production (`REQUIRE_TELEGRAM_AUTH=true`)**: Requires `Telegram-Init-Data` header with cryptographically signed data from Telegram WebApp. Prevents user impersonation.
+  - **Development (`REQUIRE_TELEGRAM_AUTH=false`)**: Accepts either `Telegram-Init-Data` OR legacy `X-User-Id` headers for testing with curl/Postman.
+- See `docs/SECURITY.md` for complete security documentation.
 - Endpoints:
   - `GET /decks` — list decks with card counts and due totals.
   - `POST /decks`, `PATCH /decks/{id}`, `DELETE /decks/{id}` — manage decks.

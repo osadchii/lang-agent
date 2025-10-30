@@ -1,33 +1,40 @@
-import { ShellLayout } from "@components/ShellLayout";
+import { useState } from "react";
+
 import { DecksPanel } from "@components/decks/DecksPanel";
 import { TrainingPanel } from "@components/training/TrainingPanel";
 
 import styles from "./AppRoot.module.css";
 
+type Section = "training" | "decks";
+
 export function App(): JSX.Element {
+  const [activeSection, setActiveSection] = useState<Section>("training");
+
   return (
-    <ShellLayout
-      header={{
-        eyebrow: "Κύμα · Μαθαίνω",
-        title: "Создавай колоды. Тренируй память. Μαζί играем.",
-        subtitle: "Собирай двусторонние карточки русское ↔ ελληνικό с подсказками ИИ и оценивай свои ответы в привычном бот-потоке.",
-        supporting: "Управление колодами и тренировки теперь внутри мини-приложения, так что η πρακτική остаётся синхронной где бы ты ни учился."
-      }}
-      footer={{
-        caption: "Готов продолжить? Возвращайся в мастерскую колод в любой момент.",
-        ctaLabel: "Синхронизировать с Telegram",
-        onCtaClick: () => {
-          // Placeholder for navigation once routing lands.
-          console.info("Запрошена синхронизация с Telegram");
-        }
-      }}
-    >
-      <div className={styles.content}>
-        <div className={styles.sections}>
-          <DecksPanel />
-          <TrainingPanel />
-        </div>
-      </div>
-    </ShellLayout>
+    <div className={styles.appShell}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>Ново-греческий бот</h1>
+        <p className={styles.subtitle}>Современный греческий для Telegram-миниаппа и мобильных устройств</p>
+      </header>
+
+      <nav className={styles.navigation} aria-label="Основные разделы">
+        <button
+          type="button"
+          className={`${styles.navButton} ${activeSection === "training" ? styles.navButtonActive : ""}`}
+          onClick={() => setActiveSection("training")}
+        >
+          Тренировка
+        </button>
+        <button
+          type="button"
+          className={`${styles.navButton} ${activeSection === "decks" ? styles.navButtonActive : ""}`}
+          onClick={() => setActiveSection("decks")}
+        >
+          Колоды
+        </button>
+      </nav>
+
+      <main className={styles.main}>{activeSection === "training" ? <TrainingPanel /> : <DecksPanel />}</main>
+    </div>
   );
 }

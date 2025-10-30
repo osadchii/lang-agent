@@ -2,13 +2,16 @@
   background: var(--surface-glass);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
-  padding: clamp(1.5rem, 3vw, 2.5rem);
+  padding: clamp(1.1rem, 2.6vw, 1.9rem);
   display: flex;
   flex-direction: column;
-  gap: 1.6rem;
+  gap: clamp(1rem, 2.5vw, 1.4rem);
   box-shadow: var(--shadow-subtle);
   backdrop-filter: blur(26px);
   color: var(--text-primary);
+  max-height: min(90vh, 720px);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .header h2 {
@@ -25,17 +28,26 @@
   max-width: 48ch;
 }
 
+.cardLayout {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: clamp(0.85rem, 2vw, 1.1rem);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .cardShell {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  padding: clamp(1.4rem, 3vw, 1.9rem);
+  gap: clamp(0.75rem, 2vw, 1rem);
+  padding: clamp(1.05rem, 2.5vw, 1.6rem);
   border-radius: 18px;
   background: linear-gradient(155deg, rgba(11, 28, 63, 0.95) 0%, rgba(28, 51, 94, 0.9) 55%, rgba(46, 27, 69, 0.88) 100%);
   border: 1px solid rgba(255, 143, 61, 0.22);
-  box-shadow: 0 24px 54px rgba(4, 10, 26, 0.6);
+  box-shadow: 0 18px 44px rgba(4, 10, 26, 0.5);
   overflow: hidden;
+  min-height: 0;
 }
 
 .cardShell::before {
@@ -46,6 +58,28 @@
   background: radial-gradient(circle at 75% -10%, rgba(255, 143, 61, 0.4), transparent 65%);
   opacity: 0.8;
   pointer-events: none;
+}
+
+.cardBody {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  scrollbar-width: thin;
+}
+
+.cardBody::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cardBody::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
 }
 
 .cardHeader {
@@ -95,18 +129,19 @@
 .prompt {
   position: relative;
   z-index: 1;
-  font-size: clamp(1.45rem, 4vw, 1.9rem);
+  font-size: clamp(1.25rem, 3.5vw, 1.6rem);
   font-weight: 600;
   letter-spacing: 0.01em;
   color: #fdf5ff;
+  line-height: 1.3;
 }
 
 .secondaryText {
   position: relative;
   z-index: 1;
   color: rgba(228, 220, 248, 0.78);
-  font-size: 0.96rem;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .revealBlock {
@@ -121,7 +156,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  font-size: clamp(1.35rem, 3.6vw, 1.75rem);
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
   color: #ffe6c4;
   letter-spacing: 0.01em;
   margin: 0;
@@ -147,7 +182,7 @@
 .againButton,
 .reviewButton,
 .easyButton {
-  padding: 0.75rem 1.4rem;
+  padding: 0.65rem 1.2rem;
   border-radius: 999px;
   border: none;
   cursor: pointer;
@@ -160,20 +195,20 @@
   align-self: flex-start;
   background: var(--accent-primary);
   color: #1a0f22;
-  box-shadow: 0 18px 40px rgba(255, 112, 74, 0.35);
+  box-shadow: 0 16px 32px rgba(255, 112, 74, 0.3);
 }
 
 .primaryButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 22px 48px rgba(255, 112, 74, 0.45);
+  box-shadow: 0 20px 42px rgba(255, 112, 74, 0.4);
   filter: brightness(1.05);
 }
 
 .actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.9rem;
-  margin-top: 1.25rem;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  margin-top: 0;
 }
 
 .againButton {

@@ -182,8 +182,9 @@ export async function removeDeckCard(deckId: number, userCardId: number): Promis
   });
 }
 
-export async function fetchNextTrainingCard(): Promise<TrainingCard | null> {
-  const card = await request<TrainingCard | undefined>("/training/next");
+export async function fetchNextTrainingCard(deckId?: number | null): Promise<TrainingCard | null> {
+  const params = deckId ? `?deck_id=${deckId}` : "";
+  const card = await request<TrainingCard | undefined>(`/training/next${params}`);
   return card ?? null;
 }
 

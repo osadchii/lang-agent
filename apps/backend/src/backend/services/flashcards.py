@@ -213,10 +213,10 @@ class FlashcardService:
             )
             await session.commit()
 
-    async def get_next_card(self, *, user_id: int) -> StudyCard | None:
+    async def get_next_card(self, *, user_id: int, deck_id: int | None = None) -> StudyCard | None:
         """Return the next due card for the user, if any."""
         async with self._database.session() as session:
-            record = await self._flashcards.fetch_next_due_card(session, user_id=user_id)
+            record = await self._flashcards.fetch_next_due_card(session, user_id=user_id, deck_id=deck_id)
             if record is None:
                 return None
             card_data = _to_flashcard_data(record.card)

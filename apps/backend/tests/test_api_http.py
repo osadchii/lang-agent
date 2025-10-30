@@ -119,7 +119,7 @@ class StubFlashcardService:
     async def remove_card_from_deck(self, profile: UserProfile, *, deck_id: int, user_card_id: int):  # type: ignore[override]
         self.removed_cards.append(user_card_id)
 
-    async def get_next_card(self, *, user_id: int):  # type: ignore[override]
+    async def get_next_card(self, *, user_id: int, deck_id: int | None = None):  # type: ignore[override]
         return self.study_card
 
     async def record_review(self, *, user_id: int, user_card_id: int, rating: ReviewRating):  # type: ignore[override]

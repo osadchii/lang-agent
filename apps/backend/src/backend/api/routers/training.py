@@ -13,11 +13,12 @@ router = APIRouter(prefix="/training", tags=["training"])
 
 @router.get("/next", response_model=schemas.TrainingCardModel, responses={204: {"description": "No due cards"}})
 async def get_next_training_card(
+    deck_id: int | None = None,
     profile: UserProfile = Depends(get_user_profile),
     flashcards: FlashcardService = Depends(get_flashcard_service),
 ):
     """Return the next due card or 204 when none are available."""
-    study_card = await flashcards.get_next_card(user_id=profile.user_id)
+    study_card = await flashcards.get_next_card(user_id=profile.user_id, deck_id=deck_id)
     if study_card is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useTrainingSession } from "@hooks/useTrainingSession";
+import { useDeckManager } from "@hooks/useDeckManager";
 
 import styles from "./TrainingPanel.module.css";
 
@@ -24,8 +25,9 @@ function translatePartOfSpeech(pos: string | null): string {
 }
 
 export function TrainingPanel(): JSX.Element {
-  const { currentCard, isLoading, isSubmitting, error, loadNextCard, reviewCard } =
+  const { currentCard, isLoading, isSubmitting, error, selectedDeckId, setSelectedDeckId, loadNextCard, reviewCard } =
     useTrainingSession();
+  const { decks } = useDeckManager();
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [hasFlippedOnce, setHasFlippedOnce] = useState(false);
@@ -47,6 +49,12 @@ export function TrainingPanel(): JSX.Element {
     }
   };
 
+  const handleDeckChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    const newDeckId = value === "" ? null : Number(value);
+    setSelectedDeckId(newDeckId);
+  };
+
   const hasCard = Boolean(currentCard);
   const canReview = hasCard && hasFlippedOnce && !isSubmitting;
 
@@ -64,6 +72,26 @@ export function TrainingPanel(): JSX.Element {
     <section className={styles.panel}>
       <div className={styles.header}>
         <h2>Тренировка</h2>
+      </div>
+
+      <div className={styles.deckSelector}>
+        <label htmlFor="deck-select" className={styles.deckLabel}>
+          Колода:
+        </label>
+        <select
+          id="deck-select"
+          className={styles.deckSelect}
+          value={selectedDeckId ?? ""}
+          onChange={handleDeckChange}
+          disabled={isLoading || isSubmitting}
+        >
+          <option value="">Все колоды</option>
+          {decks.map((deck) => (
+            <option key={deck.id} value={deck.id}>
+              {deck.name} ({deck.due_count})
+            </option>
+          ))}
+        </select>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}

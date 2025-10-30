@@ -385,20 +385,25 @@ class FlashcardRepository:
         session: AsyncSession,
         *,
         user_id: int,
+        deck_id: int | None = None,
         as_of: dt.datetime | None = None,
     ) -> UserCardRecord | None:
         """Return the soonest due flashcard for the user."""
         reference = as_of or dt.datetime.now(dt.timezone.utc)
+        conditions = [
+            UserCardRecord.user_id == user_id,
+            UserCardRecord.next_review_at <= reference,
+        ]
+        if deck_id is not None:
+            conditions.append(UserCardRecord.deck_id == deck_id)
+
         stmt: Select[tuple[UserCardRecord]] = (
             select(UserCardRecord)
             .options(
                 selectinload(UserCardRecord.card),
                 selectinload(UserCardRecord.deck),
             )
-            .where(
-                UserCardRecord.user_id == user_id,
-                UserCardRecord.next_review_at <= reference,
-            )
+            .where(*conditions)
             .order_by(UserCardRecord.next_review_at.asc(), UserCardRecord.created_at.asc())
             .limit(1)
         )

@@ -9,6 +9,8 @@ interface TrainingSessionState {
   isSubmitting: boolean;
   isRevealed: boolean;
   error: string | null;
+  selectedDeckId: number | null;
+  setSelectedDeckId: (deckId: number | null) => void;
   loadNextCard: () => Promise<void>;
   revealCard: () => void;
   reviewCard: (rating: RatingValue) => Promise<void>;
@@ -21,12 +23,13 @@ export function useTrainingSession(): TrainingSessionState {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null);
 
   const loadNextCard = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const card = await fetchNextTrainingCard();
+      const card = await fetchNextTrainingCard(selectedDeckId);
       setCurrentCard(card);
       setIsRevealed(false);
     } catch (err) {
@@ -35,7 +38,7 @@ export function useTrainingSession(): TrainingSessionState {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedDeckId]);
 
   const revealCard = useCallback(() => {
     setIsRevealed(true);
@@ -87,11 +90,13 @@ export function useTrainingSession(): TrainingSessionState {
       isSubmitting,
       isRevealed,
       error,
+      selectedDeckId,
+      setSelectedDeckId,
       loadNextCard,
       revealCard,
       reviewCard,
       reloadCurrentCard
     }),
-    [currentCard, error, isLoading, isRevealed, isSubmitting, loadNextCard, revealCard, reloadCurrentCard, reviewCard]
+    [currentCard, error, isLoading, isRevealed, isSubmitting, selectedDeckId, loadNextCard, revealCard, reloadCurrentCard, reviewCard]
   );
 }

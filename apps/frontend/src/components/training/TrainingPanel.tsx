@@ -35,11 +35,11 @@ export function TrainingPanel(): JSX.Element {
   const frontText = currentCard?.prompt ?? "";
   const backText = currentCard?.hidden ?? "";
   const frontExample = currentCard?.prompt_side === "source"
-    ? currentCard?.card.example_sentence
-    : currentCard?.card.example_translation;
-  const backExample = currentCard?.prompt_side === "source"
     ? currentCard?.card.example_translation
     : currentCard?.card.example_sentence;
+  const backExample = currentCard?.prompt_side === "source"
+    ? currentCard?.card.example_sentence
+    : currentCard?.card.example_translation;
 
   return (
     <section className={styles.panel}>

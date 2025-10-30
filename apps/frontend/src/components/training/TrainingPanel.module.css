@@ -1,53 +1,55 @@
 .panel {
   background: var(--surface-glass);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: clamp(1.1rem, 2.6vw, 1.9rem);
+  border-radius: 20px 20px 0 0;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: clamp(1rem, 2.5vw, 1.4rem);
+  gap: 0.75rem;
   box-shadow: var(--shadow-subtle);
   backdrop-filter: blur(26px);
   color: var(--text-primary);
-  max-height: min(90vh, 720px);
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .header h2 {
   margin: 0;
-  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .header p {
-  margin: 0.35rem 0 0;
-  font-size: 0.95rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  max-width: 48ch;
+  line-height: 1.4;
 }
 
 .cardLayout {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: clamp(0.85rem, 2vw, 1.1rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .cardShell {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.75rem, 2vw, 1rem);
-  padding: clamp(1.05rem, 2.5vw, 1.6rem);
+  gap: 0.75rem;
+  padding: 1rem;
   border-radius: 18px;
   background: linear-gradient(155deg, rgba(11, 28, 63, 0.95) 0%, rgba(28, 51, 94, 0.9) 55%, rgba(46, 27, 69, 0.88) 100%);
   border: 1px solid rgba(255, 143, 61, 0.22);
   box-shadow: 0 18px 44px rgba(4, 10, 26, 0.5);
-  overflow: hidden;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: auto;
 }
 
 .cardShell::before {
@@ -65,21 +67,7 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.75rem, 2vw, 1rem);
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 0.35rem;
-  scrollbar-width: thin;
-}
-
-.cardBody::-webkit-scrollbar {
-  width: 6px;
-}
-
-.cardBody::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
+  gap: 0.65rem;
 }
 
 .cardHeader {
@@ -129,7 +117,7 @@
 .prompt {
   position: relative;
   z-index: 1;
-  font-size: clamp(1.25rem, 3.5vw, 1.6rem);
+  font-size: 1.3rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: #fdf5ff;
@@ -140,8 +128,8 @@
   position: relative;
   z-index: 1;
   color: rgba(228, 220, 248, 0.78);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .revealBlock {
@@ -155,8 +143,8 @@
 .translation {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: clamp(1.2rem, 3vw, 1.55rem);
+  gap: 0.5rem;
+  font-size: 1.25rem;
   color: #ffe6c4;
   letter-spacing: 0.01em;
   margin: 0;
@@ -182,12 +170,13 @@
 .againButton,
 .reviewButton,
 .easyButton {
-  padding: 0.65rem 1.2rem;
-  border-radius: 999px;
+  padding: 0.85rem 1.2rem;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
   transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
@@ -206,8 +195,8 @@
 
 .actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: clamp(0.75rem, 2vw, 1rem);
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
   margin-top: 0;
 }
 
@@ -265,19 +254,25 @@
   color: var(--text-muted);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 520px) {
   .cardHeader {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .skipButton {
-    align-self: flex-start;
+    align-self: flex-end;
   }
-}
 
-@media (max-width: 520px) {
   .actions {
     grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .againButton,
+  .reviewButton,
+  .easyButton {
+    padding: 0.9rem 1.2rem;
   }
 }

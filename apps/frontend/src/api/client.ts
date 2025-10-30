@@ -25,12 +25,34 @@ declare global {
 const runtimeConfig: RuntimeConfig =
   typeof window !== "undefined" && window.__APP_CONFIG__ ? window.__APP_CONFIG__ : {};
 
+function isValidValue(value: string | undefined): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  // Ignore placeholder values that start with $
+  if (trimmed.startsWith("$")) return false;
+  return trimmed.length > 0;
+}
+
 const API_BASE_URL =
-  runtimeConfig.apiBaseUrl?.trim() || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
-const USER_ID = Number.parseInt(runtimeConfig.userId ?? import.meta.env.VITE_USER_ID ?? "1", 10);
-const USERNAME = runtimeConfig.userUsername ?? import.meta.env.VITE_USER_USERNAME ?? "";
-const USER_FIRST_NAME = runtimeConfig.userFirstName ?? import.meta.env.VITE_USER_FIRST_NAME ?? "";
-const USER_LAST_NAME = runtimeConfig.userLastName ?? import.meta.env.VITE_USER_LAST_NAME ?? "";
+  (isValidValue(runtimeConfig.apiBaseUrl) ? runtimeConfig.apiBaseUrl!.trim() : null) ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:8000/api";
+const USER_ID = Number.parseInt(
+  (isValidValue(runtimeConfig.userId) ? runtimeConfig.userId! : null) ?? import.meta.env.VITE_USER_ID ?? "1",
+  10
+);
+const USERNAME =
+  (isValidValue(runtimeConfig.userUsername) ? runtimeConfig.userUsername! : null) ??
+  import.meta.env.VITE_USER_USERNAME ??
+  "";
+const USER_FIRST_NAME =
+  (isValidValue(runtimeConfig.userFirstName) ? runtimeConfig.userFirstName! : null) ??
+  import.meta.env.VITE_USER_FIRST_NAME ??
+  "";
+const USER_LAST_NAME =
+  (isValidValue(runtimeConfig.userLastName) ? runtimeConfig.userLastName! : null) ??
+  import.meta.env.VITE_USER_LAST_NAME ??
+  "";
 
 const AUTH_HEADER_VALUES: Record<string, string> = {
   "X-User-Id": Number.isNaN(USER_ID) ? "1" : String(USER_ID)

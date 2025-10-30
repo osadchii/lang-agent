@@ -4,6 +4,25 @@ import { useTrainingSession } from "@hooks/useTrainingSession";
 
 import styles from "./TrainingPanel.module.css";
 
+function translatePartOfSpeech(pos: string | null): string {
+  if (!pos) return "—";
+
+  const translations: Record<string, string> = {
+    "noun": "существительное",
+    "verb": "глагол",
+    "adjective": "прилагательное",
+    "adverb": "наречие",
+    "pronoun": "местоимение",
+    "preposition": "предлог",
+    "conjunction": "союз",
+    "interjection": "междометие",
+    "particle": "частица",
+    "numeral": "числительное",
+  };
+
+  return translations[pos.toLowerCase()] || pos;
+}
+
 export function TrainingPanel(): JSX.Element {
   const { currentCard, isLoading, isSubmitting, error, loadNextCard, reviewCard } =
     useTrainingSession();
@@ -75,7 +94,7 @@ export function TrainingPanel(): JSX.Element {
                   <p className={styles.exampleText}>{frontExample}</p>
                 )}
                 {currentCard.card.part_of_speech && (
-                  <span className={styles.partOfSpeech}>{currentCard.card.part_of_speech}</span>
+                  <span className={styles.partOfSpeech}>{translatePartOfSpeech(currentCard.card.part_of_speech)}</span>
                 )}
               </div>
 
@@ -105,7 +124,7 @@ export function TrainingPanel(): JSX.Element {
                   <p className={styles.exampleText}>{backExample}</p>
                 )}
                 {currentCard.card.part_of_speech && (
-                  <span className={styles.partOfSpeech}>{currentCard.card.part_of_speech}</span>
+                  <span className={styles.partOfSpeech}>{translatePartOfSpeech(currentCard.card.part_of_speech)}</span>
                 )}
               </div>
 

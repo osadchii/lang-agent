@@ -2,10 +2,10 @@
   background: var(--surface-glass);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px 20px 0 0;
-  padding: 1rem;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
   box-shadow: var(--shadow-subtle);
   backdrop-filter: blur(26px);
   color: var(--text-primary);
@@ -16,16 +16,16 @@
 
 .header h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .header p {
-  margin: 0.25rem 0 0;
-  font-size: 0.85rem;
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .cardLayout {
@@ -41,8 +41,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
   border-radius: 18px;
   background: linear-gradient(155deg, rgba(11, 28, 63, 0.95) 0%, rgba(28, 51, 94, 0.9) 55%, rgba(46, 27, 69, 0.88) 100%);
   border: 1px solid rgba(255, 143, 61, 0.22);
@@ -68,7 +68,7 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.4rem;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -99,30 +99,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .cardHeader h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
   color: rgba(255, 255, 255, 0.72);
 }
 
 .skipButton {
-  padding: 0.45rem 1rem;
+  padding: 0.35rem 0.8rem;
   border-radius: 999px;
   border: 1px solid rgba(255, 143, 61, 0.55);
   background: rgba(12, 26, 56, 0.6);
   color: rgba(255, 189, 125, 0.96);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.2s ease;
-  box-shadow: 0 12px 28px rgba(17, 8, 32, 0.45);
+  box-shadow: 0 8px 16px rgba(17, 8, 32, 0.35);
+  flex-shrink: 0;
 }
 
 .skipButton:hover {
@@ -141,19 +143,19 @@
 .prompt {
   position: relative;
   z-index: 1;
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: #fdf5ff;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .secondaryText {
   position: relative;
   z-index: 1;
   color: rgba(228, 220, 248, 0.78);
-  font-size: 0.85rem;
-  line-height: 1.4;
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 .revealBlock {
@@ -161,14 +163,14 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.4rem;
 }
 
 .translation {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.25rem;
+  gap: 0.4rem;
+  font-size: 1.05rem;
   color: #ffe6c4;
   letter-spacing: 0.01em;
   margin: 0;
@@ -180,26 +182,26 @@
 }
 
 .partOfSpeech {
-  padding: 0.2rem 0.6rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: rgba(12, 33, 71, 0.7);
   border: 1px solid rgba(255, 189, 125, 0.35);
   color: rgba(255, 239, 220, 0.9);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
 }
 
 .primaryButton,
 .againButton,
 .reviewButton,
 .easyButton {
-  padding: 0.85rem 1.2rem;
+  padding: 0.7rem 1rem;
   border-radius: 12px;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   letter-spacing: 0.02em;
   transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
@@ -208,7 +210,7 @@
   align-self: flex-start;
   background: var(--accent-primary);
   color: #1a0f22;
-  box-shadow: 0 16px 32px rgba(255, 112, 74, 0.3);
+  box-shadow: 0 12px 24px rgba(255, 112, 74, 0.3);
 }
 
 .primaryButton:hover {
@@ -222,6 +224,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
   margin-top: 0;
+  flex-shrink: 0;
 }
 
 .againButton {

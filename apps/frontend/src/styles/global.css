@@ -108,6 +108,44 @@ p {
   max-width: 75ch;
 }
 
+/* Ensure input fields have readable text on light backgrounds */
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Default styling for inputs with light backgrounds */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+textarea {
+  color: #1a1a2e;
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="search"]::placeholder,
+input[type="number"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="url"]::placeholder,
+textarea::placeholder {
+  color: rgba(26, 26, 46, 0.5);
+  opacity: 1;
+}
+
 .glass-panel {
   background: var(--surface-glass);
   border-radius: 24px;

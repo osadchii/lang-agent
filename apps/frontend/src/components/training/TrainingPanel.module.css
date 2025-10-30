@@ -47,9 +47,10 @@
   background: linear-gradient(155deg, rgba(11, 28, 63, 0.95) 0%, rgba(28, 51, 94, 0.9) 55%, rgba(46, 27, 69, 0.88) 100%);
   border: 1px solid rgba(255, 143, 61, 0.22);
   box-shadow: 0 18px 44px rgba(4, 10, 26, 0.5);
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
+  height: 450px;
+  min-height: 450px;
+  max-height: 450px;
+  overflow: hidden;
 }
 
 .cardShell::before {
@@ -68,6 +69,29 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5rem;
+}
+
+.cardBody::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cardBody::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.cardBody::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.cardBody::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .cardHeader {
@@ -254,6 +278,24 @@
   color: var(--text-muted);
 }
 
+/* Medium screens - slightly shorter card */
+@media (max-height: 800px) {
+  .cardShell {
+    height: 380px;
+    min-height: 380px;
+    max-height: 380px;
+  }
+}
+
+/* Small screens - adaptive height */
+@media (max-height: 700px) {
+  .cardShell {
+    height: 320px;
+    min-height: 320px;
+    max-height: 320px;
+  }
+}
+
 @media (max-width: 520px) {
   .cardHeader {
     flex-direction: column;
@@ -274,5 +316,12 @@
   .reviewButton,
   .easyButton {
     padding: 0.9rem 1.2rem;
+  }
+
+  /* On mobile, make card height adaptive to viewport */
+  .cardShell {
+    height: min(400px, calc(100vh - 320px));
+    min-height: min(400px, calc(100vh - 320px));
+    max-height: min(400px, calc(100vh - 320px));
   }
 }

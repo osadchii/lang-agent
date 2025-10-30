@@ -1,25 +1,50 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useTrainingSession } from "@hooks/useTrainingSession";
 
 import styles from "./TrainingPanel.module.css";
 
 export function TrainingPanel(): JSX.Element {
-  const { currentCard, isLoading, isSubmitting, isRevealed, error, loadNextCard, revealCard, reviewCard } =
+  const { currentCard, isLoading, isSubmitting, error, loadNextCard, reviewCard } =
     useTrainingSession();
+
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [hasFlippedOnce, setHasFlippedOnce] = useState(false);
 
   useEffect(() => {
     void loadNextCard();
   }, [loadNextCard]);
 
+  // Reset flip state when card changes
+  useEffect(() => {
+    setIsFlipped(false);
+    setHasFlippedOnce(false);
+  }, [currentCard?.user_card_id]);
+
+  const handleFlipCard = () => {
+    setIsFlipped(!isFlipped);
+    if (!hasFlippedOnce) {
+      setHasFlippedOnce(true);
+    }
+  };
+
   const hasCard = Boolean(currentCard);
-  const canReview = Boolean(currentCard) && isRevealed && !isSubmitting;
+  const canReview = hasCard && hasFlippedOnce && !isSubmitting;
+
+  // Determine what to show on each side based on prompt_side
+  const frontText = currentCard?.prompt ?? "";
+  const backText = currentCard?.hidden ?? "";
+  const frontExample = currentCard?.prompt_side === "source"
+    ? currentCard?.card.example_sentence
+    : currentCard?.card.example_translation;
+  const backExample = currentCard?.prompt_side === "source"
+    ? currentCard?.card.example_translation
+    : currentCard?.card.example_sentence;
 
   return (
     <section className={styles.panel}>
       <div className={styles.header}>
         <h2>Тренировка</h2>
-        <p>Закрепляйте лексику здесь и в Telegram: короткие сессии с карточками, адаптированные под ваш ритм.</p>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
@@ -30,41 +55,67 @@ export function TrainingPanel(): JSX.Element {
 
       {hasCard && currentCard && (
         <div className={styles.cardLayout}>
-          <article className={styles.cardShell}>
-            <header className={styles.cardHeader}>
-              <h3>{currentCard.deck_name}</h3>
-              <button
-                type="button"
-                className={styles.skipButton}
-                disabled={isLoading || isSubmitting}
-                onClick={() => void loadNextCard()}
-              >
-                Пропустить
-              </button>
-            </header>
-
-            <div className={styles.cardBody}>
-              <div className={styles.prompt}>{currentCard.prompt}</div>
-              <p className={styles.secondaryText}>
-                Сторона карточки: {currentCard.prompt_side === "source" ? "Лицевая — вопрос" : "Обратная — перевод"}
-              </p>
-
-              {isRevealed ? (
-                <div className={styles.revealBlock}>
-                  <p className={styles.translation}>
-                    <strong>{currentCard.card.target_text}</strong>
-                    <span className={styles.partOfSpeech}>{currentCard.card.part_of_speech ?? "—"}</span>
-                  </p>
-                  <p className={styles.secondaryText}>{currentCard.card.example_sentence}</p>
-                  <p className={styles.secondaryText}>{currentCard.card.example_translation}</p>
-                </div>
-              ) : (
-                <button className={styles.primaryButton} disabled={isSubmitting} onClick={revealCard}>
-                  Показать ответ
+          <div className={`${styles.cardContainer} ${isFlipped ? styles.flipped : ""}`}>
+            <article className={`${styles.cardShell} ${styles.cardFront}`}>
+              <header className={styles.cardHeader}>
+                <h3>{currentCard.deck_name}</h3>
+                <button
+                  type="button"
+                  className={styles.skipButton}
+                  disabled={isLoading || isSubmitting}
+                  onClick={() => void loadNextCard()}
+                >
+                  Пропустить
                 </button>
-              )}
-            </div>
-          </article>
+              </header>
+
+              <div className={styles.cardBody}>
+                <div className={styles.prompt}>{frontText}</div>
+                {frontExample && (
+                  <p className={styles.exampleText}>{frontExample}</p>
+                )}
+                {currentCard.card.part_of_speech && (
+                  <span className={styles.partOfSpeech}>{currentCard.card.part_of_speech}</span>
+                )}
+              </div>
+
+              <div className={styles.cardFooter}>
+                <button className={styles.primaryButton} disabled={isSubmitting} onClick={handleFlipCard}>
+                  Перевернуть карточку
+                </button>
+              </div>
+            </article>
+
+            <article className={`${styles.cardShell} ${styles.cardBack}`}>
+              <header className={styles.cardHeader}>
+                <h3>{currentCard.deck_name}</h3>
+                <button
+                  type="button"
+                  className={styles.skipButton}
+                  disabled={isLoading || isSubmitting}
+                  onClick={() => void loadNextCard()}
+                >
+                  Пропустить
+                </button>
+              </header>
+
+              <div className={styles.cardBody}>
+                <div className={styles.prompt}>{backText}</div>
+                {backExample && (
+                  <p className={styles.exampleText}>{backExample}</p>
+                )}
+                {currentCard.card.part_of_speech && (
+                  <span className={styles.partOfSpeech}>{currentCard.card.part_of_speech}</span>
+                )}
+              </div>
+
+              <div className={styles.cardFooter}>
+                <button className={styles.primaryButton} disabled={isSubmitting} onClick={handleFlipCard}>
+                  Перевернуть карточку
+                </button>
+              </div>
+            </article>
+          </div>
 
           <div className={styles.actions}>
             <button className={styles.againButton} disabled={!canReview} onClick={() => void reviewCard("again")}>
@@ -79,6 +130,10 @@ export function TrainingPanel(): JSX.Element {
           </div>
         </div>
       )}
+
+      <div className={styles.footer}>
+        <p>Закрепляйте лексику здесь и в Telegram: короткие сессии с карточками, адаптированные под ваш ритм.</p>
+      </div>
     </section>
   );
 }

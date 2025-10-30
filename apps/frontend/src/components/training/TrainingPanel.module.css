@@ -37,8 +37,18 @@
   overflow: hidden;
 }
 
-.cardShell {
+.cardContainer {
   position: relative;
+  width: 100%;
+  height: 280px;
+  perspective: 1000px;
+  flex-shrink: 0;
+}
+
+.cardShell {
+  position: absolute;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -47,10 +57,26 @@
   background: linear-gradient(155deg, rgba(11, 28, 63, 0.95) 0%, rgba(28, 51, 94, 0.9) 55%, rgba(46, 27, 69, 0.88) 100%);
   border: 1px solid rgba(255, 143, 61, 0.22);
   box-shadow: 0 18px 44px rgba(4, 10, 26, 0.5);
-  height: 360px;
-  min-height: 360px;
-  max-height: 360px;
   overflow: hidden;
+  backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.cardFront {
+  transform: rotateY(0deg);
+}
+
+.cardBack {
+  transform: rotateY(180deg);
+}
+
+.cardContainer.flipped .cardFront {
+  transform: rotateY(180deg);
+}
+
+.cardContainer.flipped .cardBack {
+  transform: rotateY(360deg);
 }
 
 .cardShell::before {
@@ -71,12 +97,23 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 0.3rem;
+  padding: 0.5rem;
+}
+
+.cardFooter {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+  flex-shrink: 0;
 }
 
 .cardBody::-webkit-scrollbar {
@@ -146,14 +183,27 @@
 .prompt {
   position: relative;
   z-index: 1;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: #fdf5ff;
-  line-height: 1.25;
-  margin-bottom: 0.2rem;
+  line-height: 1.3;
   text-align: center;
-  padding: 0.3rem 0;
+  padding: 0;
+  margin: 0;
+}
+
+.exampleText {
+  position: relative;
+  z-index: 1;
+  color: rgba(228, 220, 248, 0.75);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0.9;
+  font-style: italic;
+  margin: 0;
+  max-width: 90%;
 }
 
 .secondaryText {
@@ -166,50 +216,8 @@
   opacity: 0.85;
 }
 
-.revealBlock {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.6rem 0.3rem 0.3rem;
-  border-top: 1px solid rgba(255, 143, 61, 0.15);
-  margin-top: 0.3rem;
-  animation: fadeInSlide 0.25s ease-out;
-}
-
-@keyframes fadeInSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.translation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 1.1rem;
-  color: #ffe6c4;
-  letter-spacing: 0.02em;
-  margin: 0;
-  text-align: center;
-}
-
-.translation strong {
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  font-size: 1.15rem;
-}
-
 .partOfSpeech {
-  padding: 0.15rem 0.5rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
   background: rgba(12, 33, 71, 0.7);
   border: 1px solid rgba(255, 189, 125, 0.35);
@@ -217,6 +225,8 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  font-style: normal;
+  display: inline-block;
 }
 
 .primaryButton,
@@ -234,14 +244,12 @@
 }
 
 .primaryButton {
-  align-self: center;
   background: linear-gradient(135deg, #FF8F3D 0%, #FF7043 100%);
   color: #0a0412;
   font-weight: 700;
   box-shadow: 0 6px 20px rgba(255, 143, 61, 0.5), 0 0 30px rgba(255, 112, 67, 0.3);
-  margin-top: 0.6rem;
-  padding: 0.75rem 1.8rem;
-  min-width: 170px;
+  padding: 0.7rem 1.6rem;
+  min-width: 180px;
   border: 1px solid rgba(255, 180, 110, 0.4);
 }
 
@@ -313,12 +321,24 @@
   color: var(--text-muted);
 }
 
+.footer {
+  padding-top: 0.5rem;
+  flex-shrink: 0;
+}
+
+.footer p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  text-align: center;
+  opacity: 0.85;
+}
+
 /* Mobile-first responsive adjustments */
 @media (max-width: 520px) {
-  .cardShell {
-    height: 380px;
-    min-height: 380px;
-    max-height: 380px;
+  .cardContainer {
+    height: 300px;
   }
 
   .cardHeader {
@@ -350,38 +370,34 @@
   }
 
   .prompt {
-    font-size: 1.15rem;
+    font-size: 1.25rem;
   }
 
-  .translation strong {
-    font-size: 1.1rem;
+  .exampleText {
+    font-size: 0.75rem;
   }
 }
 
 /* Very small screens */
 @media (max-width: 380px) {
+  .cardContainer {
+    height: 280px;
+  }
+
   .cardShell {
     padding: 0.6rem;
-    height: 360px;
-    min-height: 360px;
-    max-height: 360px;
   }
 
   .prompt {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
+  }
+
+  .exampleText {
+    font-size: 0.7rem;
   }
 
   .primaryButton {
     min-width: 160px;
-    padding: 0.7rem 1.5rem;
-  }
-}
-
-/* Larger mobile screens */
-@media (min-width: 521px) and (max-width: 768px) {
-  .cardShell {
-    height: 380px;
-    min-height: 380px;
-    max-height: 380px;
+    padding: 0.65rem 1.4rem;
   }
 }

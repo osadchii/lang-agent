@@ -123,6 +123,7 @@ jobs:
           target: /opt/lang-agent
 
       - name: Pull and restart services
+        id: deploy_step
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.RPI_HOST }}
@@ -138,3 +139,19 @@ jobs:
             echo "${{ secrets.REGISTRY_SECRET }}" | docker login ghcr.io -u osadchii --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
+
+      - name: Send Telegram notification on success
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_API_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d parse_mode="Markdown" \
+            -d text="✅ *Деплой успешно завершен*%0A%0A🚀 Репозиторий: \`${{ github.repository }}\`%0A📦 Коммит: [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})%0A👤 Автор: ${{ github.actor }}%0A🌿 Ветка: \`${{ github.ref_name }}\`%0A%0A🔗 [Посмотреть детали](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+      - name: Send Telegram notification on failure
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_API_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d parse_mode="Markdown" \
+            -d text="❌ *Ошибка деплоя*%0A%0A🚀 Репозиторий: \`${{ github.repository }}\`%0A📦 Коммит: [\`${GITHUB_SHA:0:7}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})%0A👤 Автор: ${{ github.actor }}%0A🌿 Ветка: \`${{ github.ref_name }}\`%0A%0A⚠️ Деплой завершился с ошибкой. Проверьте логи для получения деталей.%0A%0A🔗 [Посмотреть логи ошибок](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"

@@ -181,7 +181,7 @@
 
 .generateForm {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(72px, 96px) max-content;
+  grid-template-columns: minmax(0, 1fr) minmax(88px, 120px) minmax(140px, max-content);
   align-items: stretch;
   gap: 0.5rem;
   width: 100%;
@@ -270,8 +270,13 @@
 
 .generateButton {
   height: 100%;
-  padding: 0.6rem 1.2rem;
+  min-width: 8.5rem;
+  padding: 0.6rem 1.35rem;
   align-self: stretch;
+  white-space: normal;
+  line-height: 1.25;
+  font-size: 0.78rem;
+  word-break: keep-all;
 }
 
 .generatingButton {
@@ -315,14 +320,16 @@
   padding: 0.65rem 0.75rem;
   border-radius: 10px;
   border: 1px solid rgba(255, 143, 61, 0.3);
-  background: rgba(12, 26, 56, 0.72);
-  color: var(--text-primary);
+  background: linear-gradient(145deg, rgba(12, 26, 56, 0.92), rgba(12, 26, 56, 0.78));
+  color: rgba(255, 255, 255, 0.95);
   font-size: 0.95rem;
   font-weight: 600;
   text-align: center;
   outline: none;
   letter-spacing: 0.03em;
   transition: all 0.2s ease;
+  text-shadow: 0 0 6px rgba(4, 8, 18, 0.45);
+  font-variant-numeric: tabular-nums;
 }
 
 .countInput:focus {
@@ -343,6 +350,38 @@
 
 .countInput[type="number"] {
   -moz-appearance: textfield;
+}
+
+.cardItemRecent {
+  border-color: rgba(255, 203, 134, 0.65);
+  background: linear-gradient(155deg, rgba(255, 190, 120, 0.22), rgba(11, 28, 63, 0.78));
+  box-shadow: 0 0 0 1px rgba(255, 203, 134, 0.25), 0 12px 26px rgba(255, 143, 61, 0.18);
+  position: relative;
+  animation: recentGlow 1.6s ease-in-out infinite;
+}
+
+.cardItemRecent::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(circle at 20% 0%, rgba(255, 243, 224, 0.45) 0%, rgba(255, 143, 61, 0) 65%);
+  opacity: 0.75;
+  mix-blend-mode: screen;
+}
+
+@keyframes recentGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(255, 203, 134, 0.3), 0 12px 26px rgba(255, 143, 61, 0.16);
+    transform: translateY(0);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1px rgba(255, 203, 134, 0.48), 0 18px 32px rgba(255, 143, 61, 0.24);
+    transform: translateY(-2px);
+  }
 }
 
 @media (max-width: 460px) {

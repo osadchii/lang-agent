@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useDeckManager } from "@hooks/useDeckManager";
 import { generateDeckCards } from "@api/client";
@@ -39,11 +39,32 @@ export function DecksPanel(): JSX.Element {
   const [generatePrompt, setGeneratePrompt] = useState("");
   const [generateCount, setGenerateCount] = useState(10);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [recentCardIds, setRecentCardIds] = useState<number[]>([]);
 
   useEffect(() => {
     setEditName(selectedDeck?.name ?? "");
     setEditDescription(selectedDeck?.description ?? "");
   }, [selectedDeck?.id, selectedDeck?.name, selectedDeck?.description]);
+
+  useEffect(() => {
+    setRecentCardIds([]);
+  }, [selectedDeckId]);
+
+  const sortedCards = useMemo(() => {
+    if (recentCardIds.length === 0) {
+      return cards;
+    }
+    const recentSet = new Set(recentCardIds);
+    const recent = cards.filter((card) => recentSet.has(card.user_card_id));
+    const others = cards.filter((card) => !recentSet.has(card.user_card_id));
+    return [...recent, ...others];
+  }, [cards, recentCardIds]);
+
+  const recentCardIdSet = useMemo(() => new Set(recentCardIds), [recentCardIds]);
+
+  const handleRecentCardInteraction = useCallback((userCardId: number) => {
+    setRecentCardIds((current) => (current.includes(userCardId) ? current.filter((id) => id !== userCardId) : current));
+  }, []);
 
   const handleCreateDeck = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -102,11 +123,18 @@ export function DecksPanel(): JSX.Element {
     }
 
     setIsGenerating(true);
+    setRecentCardIds([]);
     try {
-      await generateDeckCards(selectedDeck.id, generatePrompt.trim(), generateCount);
+      const generatedCards = await generateDeckCards(selectedDeck.id, generatePrompt.trim(), generateCount);
+      const linkedCardIds = generatedCards
+        .filter((card) => card.linked_to_user)
+        .map((card) => card.user_card_id);
       setGeneratePrompt("");
       // Refresh cards to show newly generated ones
       await refreshCards(selectedDeck.id);
+      if (linkedCardIds.length > 0) {
+        setRecentCardIds(linkedCardIds);
+      }
     } catch (error) {
       console.error("Не удалось сгенерировать карточки", error);
     } finally {
@@ -263,30 +291,45 @@ export function DecksPanel(): JSX.Element {
 
           {isLoadingCards ? (
             <p className={styles.muted}>Загружаем карточки…</p>
-          ) : cards.length === 0 ? (
+          ) : sortedCards.length === 0 ? (
             <p className={styles.emptyState}>Добавь слово или сгенерируй карточки</p>
           ) : (
             <div className={styles.cardList}>
-              {cards.map((card) => (
-                <article key={card.user_card_id} className={styles.cardItem}>
-                  <div className={styles.cardTop}>
-                    <strong>{card.card.target_text}</strong>
-                    <span className={styles.pos}>{card.card.part_of_speech ?? "—"}</span>
-                    <button
-                      className={styles.removeButton}
-                      onClick={() => void removeCard(card.deck_id, card.user_card_id)}
-                      disabled={isSavingCard}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className={styles.cardDetails}>
-                    <p><em>{card.card.source_text}</em></p>
-                    <p className={styles.example}>{card.card.example_sentence}</p>
-                    <p className={styles.exampleTranslation}>{card.card.example_translation}</p>
-                  </div>
-                </article>
-              ))}
+              {sortedCards.map((card) => {
+                const isRecent = recentCardIdSet.has(card.user_card_id);
+                const cardClassName = isRecent ? `${styles.cardItem} ${styles.cardItemRecent}` : styles.cardItem;
+                const dismissRecent = () => {
+                  if (isRecent) {
+                    handleRecentCardInteraction(card.user_card_id);
+                  }
+                };
+                return (
+                  <article
+                    key={card.user_card_id}
+                    className={cardClassName}
+                    onPointerEnter={dismissRecent}
+                    onPointerDown={dismissRecent}
+                    onTouchStart={dismissRecent}
+                  >
+                    <div className={styles.cardTop}>
+                      <strong>{card.card.target_text}</strong>
+                      <span className={styles.pos}>{card.card.part_of_speech ?? "—"}</span>
+                      <button
+                        className={styles.removeButton}
+                        onClick={() => void removeCard(card.deck_id, card.user_card_id)}
+                        disabled={isSavingCard}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className={styles.cardDetails}>
+                      <p><em>{card.card.source_text}</em></p>
+                      <p className={styles.example}>{card.card.example_sentence}</p>
+                      <p className={styles.exampleTranslation}>{card.card.example_translation}</p>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </>

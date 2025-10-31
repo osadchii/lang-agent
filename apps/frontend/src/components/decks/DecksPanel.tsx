@@ -37,7 +37,7 @@ export function DecksPanel(): JSX.Element {
   const [editDescription, setEditDescription] = useState(selectedDeck?.description ?? "");
   const [cardPrompt, setCardPrompt] = useState("");
   const [generatePrompt, setGeneratePrompt] = useState("");
-  const [generateCount, setGenerateCount] = useState(15);
+  const [generateCount, setGenerateCount] = useState(10);
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
@@ -224,12 +224,19 @@ export function DecksPanel(): JSX.Element {
               </button>
             </form>
 
-            <form className={styles.generateForm} onSubmit={handleGenerateCards}>
-              <input
-                className={styles.inputCompact}
+            <form
+              className={isGenerating ? `${styles.generateForm} ${styles.generating}` : styles.generateForm}
+              onSubmit={handleGenerateCards}
+            >
+              <textarea
+                className={styles.generatePrompt}
                 value={generatePrompt}
                 onChange={(e) => setGeneratePrompt(e.target.value)}
-                placeholder="Промпт для генерации: еда, путешествия..."
+                placeholder="Введите описание для генерации"
+                rows={3}
+                maxLength={500}
+                aria-label="Описание для генерации карточек"
+                disabled={isGenerating}
               />
               <input
                 type="number"
@@ -238,8 +245,15 @@ export function DecksPanel(): JSX.Element {
                 onChange={(e) => setGenerateCount(Number(e.target.value))}
                 min={5}
                 max={30}
+                inputMode="numeric"
+                aria-label="Количество карточек для генерации"
+                disabled={isGenerating}
               />
-              <button className={styles.generateButton} type="submit" disabled={isGenerating}>
+              <button
+                className={isGenerating ? `${styles.generateButton} ${styles.generatingButton}` : styles.generateButton}
+                type="submit"
+                disabled={isGenerating}
+              >
                 {isGenerating ? "Генерируем..." : "✨ Сгенерировать"}
               </button>
             </form>

@@ -173,16 +173,73 @@
   gap: 0.5rem;
 }
 
-.addCardForm,
-.generateForm {
+.addCardForm {
   display: flex;
   gap: 0.4rem;
   align-items: center;
 }
 
+.generateForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(72px, 96px) max-content;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: 100%;
+  position: relative;
+}
+
+.generatePrompt {
+  grid-column: 1 / -1;
+  min-height: 4.25rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 143, 61, 0.3);
+  background: linear-gradient(145deg, rgba(12, 26, 56, 0.72), rgba(12, 26, 56, 0.58));
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  resize: vertical;
+  box-shadow: inset 0 1px 3px rgba(9, 15, 32, 0.4);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.generatePrompt:focus {
+  border-color: rgba(255, 143, 61, 0.6);
+  background: rgba(12, 26, 56, 0.85);
+  box-shadow: 0 0 0 2px rgba(255, 143, 61, 0.16), inset 0 1px 3px rgba(9, 15, 32, 0.4);
+  outline: none;
+}
+
+.generatePrompt::placeholder {
+  color: rgba(228, 220, 248, 0.65);
+}
+
+.generatePrompt:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.generating {
+  position: relative;
+  z-index: 0;
+}
+
+.generating::after {
+  content: "";
+  position: absolute;
+  inset: -0.35rem;
+  border-radius: 20px;
+  background: radial-gradient(circle at center, rgba(255, 143, 61, 0.28) 0%, rgba(255, 143, 61, 0) 72%);
+  opacity: 0;
+  animation: generatingPulse 1.25s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .addButton,
 .generateButton {
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   border-radius: 8px;
   border: 1px solid rgba(255, 143, 61, 0.5);
   background: linear-gradient(135deg, rgba(255, 143, 61, 0.2), rgba(255, 143, 61, 0.1));
@@ -192,6 +249,11 @@
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  text-align: center;
 }
 
 .addButton:hover,
@@ -206,16 +268,96 @@
   cursor: not-allowed;
 }
 
+.generateButton {
+  height: 100%;
+  padding: 0.6rem 1.2rem;
+  align-self: stretch;
+}
+
+.generatingButton {
+  opacity: 1 !important;
+  cursor: wait !important;
+  animation: generatingBlink 0.85s ease-in-out infinite;
+}
+
+@keyframes generatingPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  50% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes generatingBlink {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 6px 18px rgba(255, 143, 61, 0.28);
+  }
+
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(255, 143, 61, 0.45);
+  }
+}
+
 .countInput {
-  width: 60px;
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 143, 61, 0.25);
-  background: rgba(12, 26, 56, 0.6);
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 143, 61, 0.3);
+  background: rgba(12, 26, 56, 0.72);
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 600;
   text-align: center;
   outline: none;
+  letter-spacing: 0.03em;
+  transition: all 0.2s ease;
+}
+
+.countInput:focus {
+  border-color: rgba(255, 143, 61, 0.6);
+  background: rgba(12, 26, 56, 0.88);
+  box-shadow: 0 0 0 2px rgba(255, 143, 61, 0.14);
+}
+
+.countInput:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.countInput::-webkit-outer-spin-button,
+.countInput::-webkit-inner-spin-button {
+  margin: 0;
+}
+
+.countInput[type="number"] {
+  -moz-appearance: textfield;
+}
+
+@media (max-width: 460px) {
+  .generateForm {
+    grid-template-columns: 1fr;
+  }
+
+  .countInput,
+  .generateButton {
+    width: 100%;
+  }
+
+  .generateButton {
+    height: auto;
+  }
 }
 
 .cardList {
@@ -423,3 +565,4 @@
   padding: 2rem 1rem;
   margin: 0;
 }
+

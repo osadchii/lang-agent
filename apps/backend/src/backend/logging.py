@@ -94,7 +94,10 @@ def configure_logging(
     # Ensure all existing loggers propagate to the root handler
     # This is important because loggers are created during module import
     # before configure_logging is called
-    for name in list(logging.Logger.manager.loggerDict.keys()):
+    logger_names = list(logging.Logger.manager.loggerDict.keys())
+    logger.info("Configuring %d existing loggers: %s", len(logger_names), logger_names)
+
+    for name in logger_names:
         child_logger = logging.getLogger(name)
         # Clear handlers from child loggers so they propagate to root
         child_logger.handlers.clear()
@@ -103,6 +106,14 @@ def configure_logging(
         # Set level to match root (or inherit it)
         if child_logger.level == logging.NOTSET:
             child_logger.setLevel(resolved_level)
+
+        logger.info(
+            "Configured logger: name=%s, level=%s, propagate=%s, handlers=%d",
+            name,
+            logging.getLevelName(child_logger.level),
+            child_logger.propagate,
+            len(child_logger.handlers),
+        )
 
     # Test that backend loggers work
     backend_test_logger = logging.getLogger("backend.test")

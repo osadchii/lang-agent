@@ -22,6 +22,9 @@ async def telegram_webhook(
     telegram_bot: TelegramBotRunner = Depends(get_telegram_bot),
 ) -> Response:
     """Handle incoming webhook updates from Telegram."""
+    # Test if logger works at all
+    print(f"[WEBHOOK DEBUG] Webhook called! Logger name: {logger.name}, Level: {logger.level}, Handlers: {len(logger.handlers)}")
+
     logger.info(
         "Webhook received: update_id=%s, has_message=%s",
         update_data.get("update_id"),

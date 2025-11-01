@@ -53,12 +53,16 @@ def get_logger(name: str) -> logging.Logger:
     # Always use the standard logging.getLogger to maintain singleton behavior
     logger = logging.getLogger(name)
 
-    # Ensure proper configuration
+    # CRITICAL: Force configuration even if logging was already configured
+    # This ensures all loggers work correctly regardless of creation order
     if name != "root":
         # Child loggers should propagate to root and not have their own handlers
         logger.propagate = True
         # Remove any handlers that might have been added
         logger.handlers.clear()
+        # Set level to NOTSET so it inherits from root
+        if logger.level != logging.NOTSET:
+            logger.level = logging.NOTSET
 
     # Track loggers created before configuration
     if not _logging_configured and name not in _pending_loggers:
@@ -74,3 +78,31 @@ def get_pending_loggers() -> list[str]:
     This is useful for debugging and ensuring proper initialization order.
     """
     return list(_pending_loggers.keys())
+
+
+def reconfigure_all_loggers() -> None:
+    """
+    Force reconfiguration of all existing loggers.
+
+    This ensures that all loggers (including ones created by third-party libraries
+    like aiogram) are properly configured to propagate to root logger.
+
+    Call this after configure_logging() if you notice logs are missing from
+    specific libraries.
+    """
+    if not _logging_configured:
+        return
+
+    root_logger = logging.getLogger()
+    root_level = root_logger.level
+
+    # Get all existing loggers
+    logger_names = list(logging.Logger.manager.loggerDict.keys())
+
+    for name in logger_names:
+        logger_obj = logging.getLogger(name)
+        if name != "root" and not name.startswith(("urllib3", "requests")):
+            # Force proper configuration
+            logger_obj.handlers.clear()
+            logger_obj.propagate = True
+            logger_obj.setLevel(logging.NOTSET)  # Inherit from root

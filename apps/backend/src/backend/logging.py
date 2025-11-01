@@ -114,9 +114,8 @@ def configure_logging(
         child_logger.handlers.clear()
         # Ensure propagation is enabled
         child_logger.propagate = True
-        # Set level to match root (or inherit it)
-        if child_logger.level == logging.NOTSET:
-            child_logger.setLevel(resolved_level)
+        # Set level to NOTSET so it inherits from root
+        child_logger.setLevel(logging.NOTSET)
 
     # Test that backend loggers work
     backend_test_logger = logging.getLogger("backend.test")

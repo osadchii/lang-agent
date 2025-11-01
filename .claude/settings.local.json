@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Select-Object Id, ProcessName, CommandLine -First 20)",
-      "Bash(python test_logging.py:*)"
+      "Bash(python test_logging.py:*)",
+      "Bash(timeout 5 python:*)"
     ],
     "deny": [],
     "ask": []

@@ -263,21 +263,29 @@ class TelegramBotRunner:
 
         message_text = message.text or ""
 
-        # Log through root logger as well
-        root_logger = logging.getLogger()
-        root_logger.info(
-            "[ROOT] Bot message received: user_id=%d, username=%s, message_length=%d",
-            user.id,
-            user.username or "unknown",
-            len(message_text),
-        )
+        try:
+            # Log through root logger as well
+            print(f"[BOT DEBUG] About to log to root logger", file=sys.stderr, flush=True)
+            root_logger = logging.getLogger()
+            root_logger.info(
+                "[ROOT] Bot message received: user_id=%d, username=%s, message_length=%d",
+                user.id,
+                user.username or "unknown",
+                len(message_text),
+            )
+            print(f"[BOT DEBUG] Root logger done", file=sys.stderr, flush=True)
 
-        logger.info(
-            "Bot message received: user_id=%d, username=%s, message_length=%d",
-            user.id,
-            user.username or "unknown",
-            len(message_text),
-        )
+            logger.info(
+                "Bot message received: user_id=%d, username=%s, message_length=%d",
+                user.id,
+                user.username or "unknown",
+                len(message_text),
+            )
+            print(f"[BOT DEBUG] Child logger done", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[BOT DEBUG] ERROR during logging: {e}", file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc()
 
         payload = UserMessagePayload(
             user_id=user.id,

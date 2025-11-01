@@ -26,25 +26,34 @@ async def telegram_webhook(
     import sys
     print(f"[WEBHOOK DEBUG] Webhook called!", file=sys.stderr, flush=True)
 
-    # Log through multiple loggers to test which one works
-    root_logger = logging.getLogger()
-    root_logger.info("[ROOT] Webhook received: update_id=%s", update_data.get("update_id"))
+    try:
+        # Log through multiple loggers to test which one works
+        print(f"[WEBHOOK DEBUG] About to log to root logger", file=sys.stderr, flush=True)
+        root_logger = logging.getLogger()
+        root_logger.info("[ROOT] Webhook received: update_id=%s", update_data.get("update_id"))
+        print(f"[WEBHOOK DEBUG] Root logger done", file=sys.stderr, flush=True)
 
-    logger.info(
-        "Webhook received: update_id=%s, has_message=%s",
-        update_data.get("update_id"),
-        "message" in update_data,
-    )
+        logger.info(
+            "Webhook received: update_id=%s, has_message=%s",
+            update_data.get("update_id"),
+            "message" in update_data,
+        )
+        print(f"[WEBHOOK DEBUG] Child logger done", file=sys.stderr, flush=True)
 
-    # Also log logger configuration for debugging
-    logger.info(
-        "Logger config: name=%s, level=%s, propagate=%s, handlers=%s, parent=%s",
-        logger.name,
-        logging.getLevelName(logger.level),
-        logger.propagate,
-        [type(h).__name__ for h in logger.handlers],
-        logger.parent.name if logger.parent else None,
-    )
+        # Also log logger configuration for debugging
+        logger.info(
+            "Logger config: name=%s, level=%s, propagate=%s, handlers=%s, parent=%s",
+            logger.name,
+            logging.getLevelName(logger.level),
+            logger.propagate,
+            [type(h).__name__ for h in logger.handlers],
+            logger.parent.name if logger.parent else None,
+        )
+        print(f"[WEBHOOK DEBUG] All logging complete", file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"[WEBHOOK DEBUG] ERROR during logging: {e}", file=sys.stderr, flush=True)
+        import traceback
+        traceback.print_exc()
 
     try:
         # Parse the update from the incoming JSON

@@ -1,8 +1,36 @@
 # Loki Logging Setup
 
+## Quick Start
+
+1. **Добавьте в `.env`:**
+   ```env
+   LOKI_URL=http://loki:3100/loki/api/v1/push
+   ```
+
+2. **Перезапустите backend:**
+   ```bash
+   docker-compose restart backend
+   ```
+
+3. **Проверьте что работает:**
+   ```bash
+   docker logs backend 2>&1 | grep "Loki logging enabled"
+   ```
+
+4. **В Grafana Explore используйте:**
+   ```logql
+   {job="lang-agent"}
+   ```
+
 ## Overview
 
 Приложение поддерживает отправку логов в Grafana Loki для централизованного мониторинга.
+
+**LOKI_LABELS не обязательны!** По умолчанию автоматически добавляются:
+- `job="lang-agent"`
+- `application="lang-agent"`
+- `environment="production"` (из APP_ENV)
+- `host="<container-name>"`
 
 ## Configuration
 
@@ -73,18 +101,57 @@ LOKI_URL=http://loki:3100/loki/api/v1/push
 3. Используйте LogQL запросы:
 
 ```logql
-# Все логи приложения
+# ОСНОВНЫЕ LABELS:
+# - job="lang-agent" (всегда добавляется автоматически)
+# - application="lang-agent" (если задан в env)
+# - environment="production" (из APP_ENV)
+# - host="hostname" (имя контейнера)
+
+# Все логи приложения (используйте job label)
+{job="lang-agent"}
+
+# Или по application
 {application="lang-agent"}
 
-# Только ошибки
-{application="lang-agent"} |= "ERROR"
+# Только ошибки (ищите по тексту)
+{job="lang-agent"} |= "ERROR"
 
 # Логи production среды
-{application="lang-agent", environment="production"}
+{job="lang-agent", environment="production"}
 
-# С фильтрацией по тексту
-{application="lang-agent"} |= "Telegram"
+# Telegram бот логи
+{job="lang-agent"} |= "Telegram"
+{job="lang-agent"} |~ "aiogram|Telegram"
+
+# FastAPI логи
+{job="lang-agent"} |= "uvicorn"
+
+# Конкретные эндпоинты
+{job="lang-agent"} |= "POST /api/"
+{job="lang-agent"} |= "GET /health"
+
+# По уровню логирования
+{job="lang-agent"} |= "[ERROR]"
+{job="lang-agent"} |= "[WARNING]"
+{job="lang-agent"} |= "[INFO]"
 ```
+
+### Проверка что логи приходят
+
+Сначала убедитесь, что логи вообще есть:
+
+```logql
+# Показать все labels (чтобы понять что есть)
+{job=~".+"}
+
+# Или просто всё что есть за последние 5 минут
+{job="lang-agent"}
+```
+
+Если labels пустые или ничего не находится:
+1. Проверьте правильность `LOKI_URL`
+2. Убедитесь что контейнеры в одной сети
+3. Посмотрите логи контейнера на ошибки
 
 ### Example Dashboard Queries
 
@@ -100,25 +167,101 @@ sum by(level) (count_over_time({application="lang-agent"}[1m]))
 
 ## Testing
 
-Проверьте, что логи отправляются:
+### 1. Проверьте что Loki handler включен:
 
 ```bash
 # Посмотрите логи контейнера
-docker logs backend 2>&1 | grep "Loki logging enabled"
+docker logs backend 2>&1 | grep -i loki
 
 # Должны увидеть:
-# [INFO] backend.logging: Loki logging enabled (url=http://loki:3100/loki/api/v1/push)
+# [INFO] backend.logging: Logging configured (level=INFO)
+# [INFO] backend.logging: Loki logging enabled (url=http://loki:3100/loki/api/v1/push, labels={...})
 ```
+
+### 2. Проверьте подключение к Loki:
+
+```bash
+# Из контейнера backend попробуйте достучаться до Loki
+docker exec backend curl -v http://loki:3100/ready
+
+# Или проверьте что Loki доступен
+curl http://localhost:3100/ready
+```
+
+### 3. В Grafana Explore:
+
+Попробуйте самый простой запрос:
+```logql
+{job="lang-agent"}
+```
+
+Если ничего нет, попробуйте посмотреть ВСЕ labels:
+```logql
+{job=~".+"}
+```
+
+### 4. Отправьте тестовый запрос к API:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Этот запрос должен создать лог записи в Loki.
 
 ## Troubleshooting
 
+### Labels пустые в Grafana
+
+Если вы видите пустые labels в Grafana:
+
+1. **Проверьте labels которые отправляются:**
+   ```bash
+   docker logs backend 2>&1 | grep "Loki logging enabled"
+   # Должно показать: labels={'application': 'lang-agent', 'environment': 'production', ...}
+   ```
+
+2. **Попробуйте искать по job label:**
+   ```logql
+   {job="lang-agent"}
+   ```
+   Label `job` добавляется автоматически
+
+3. **Посмотрите ВСЕ доступные labels:**
+   В Grafana Explore нажмите на "Label browser" или используйте:
+   ```logql
+   {job=~".+"}
+   ```
+
 ### Логи не появляются в Grafana
 
-1. Проверьте, что `LOKI_URL` правильно настроен
-2. Убедитесь, что контейнеры могут общаться между собой
-3. Проверьте логи приложения на наличие ошибок:
+1. **Проверьте настройку Loki URL:**
    ```bash
    docker logs backend 2>&1 | grep -i loki
+   ```
+
+2. **Проверьте что контейнеры в одной сети:**
+   ```bash
+   # Посмотрите сети backend контейнера
+   docker inspect backend | grep -A 10 Networks
+
+   # Посмотрите сети loki контейнера
+   docker inspect loki | grep -A 10 Networks
+   ```
+
+   Если они в разных сетях, добавьте в docker-compose.yml:
+   ```yaml
+   services:
+     backend:
+       networks:
+         - web
+         - backend
+         - monitoring  # <- добавьте сеть где находится Loki
+   ```
+
+3. **Проверьте доступность Loki из backend:**
+   ```bash
+   docker exec backend curl -v http://loki:3100/ready
+   docker exec backend ping -c 3 loki
    ```
 
 ### Connection errors

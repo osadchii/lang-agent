@@ -6,7 +6,8 @@
       "Bash(npm run dev:*)",
       "Bash(python -m mypy:*)",
       "Bash(python -m pyright:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

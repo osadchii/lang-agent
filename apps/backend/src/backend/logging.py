@@ -37,16 +37,26 @@ def configure_logging(
     # Loki handler (optional)
     if loki_url:
         try:
-            from logging_loki import LokiHandler
+            import socket
+            from logging_loki import LokiHandler  # type: ignore[import-not-found]
+
+            # Ensure we have labels
+            labels = loki_labels or {}
+            # Add hostname if not present
+            if "host" not in labels:
+                labels["host"] = socket.gethostname()
+            if "job" not in labels:
+                labels["job"] = "lang-agent"
 
             loki_handler = LokiHandler(
                 url=loki_url,
-                tags=loki_labels or {},
+                tags=labels,
                 version="1",
+                # Add additional metadata
+                auth=None,  # Set if using basic auth
             )
             loki_handler.setLevel(resolved_level)
             handlers.append(loki_handler)
-            logging.getLogger(__name__).info("Loki logging enabled (url=%s)", loki_url)
         except ImportError:
             logging.getLogger(__name__).warning(
                 "python-logging-loki is not installed. Loki logging disabled. "
@@ -58,10 +68,15 @@ def configure_logging(
     logging.basicConfig(level=resolved_level, handlers=handlers, force=True)
     logging.captureWarnings(True)
 
-    logging.getLogger(__name__).info(
+    logger = logging.getLogger(__name__)
+    logger.info(
         "Logging configured (level=%s)",
         logging.getLevelName(resolved_level),
     )
+
+    # Log Loki configuration if enabled
+    if loki_url and any(isinstance(h, type(h)) and "Loki" in type(h).__name__ for h in handlers):
+        logger.info("Loki logging enabled (url=%s, labels=%s)", loki_url, loki_labels or {})
 
     # Ensure aiogram and asyncio loggers propagate to the root handler.
     for logger_name in ("aiogram", "asyncio"):

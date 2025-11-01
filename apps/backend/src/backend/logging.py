@@ -48,15 +48,21 @@ def configure_logging(
             if "job" not in labels:
                 labels["job"] = "lang-agent"
 
+            # Create Loki handler with immediate sending (no buffering)
             loki_handler = LokiHandler(
                 url=loki_url,
                 tags=labels,
                 version="1",
-                # Add additional metadata
                 auth=None,  # Set if using basic auth
             )
             loki_handler.setLevel(resolved_level)
             handlers.append(loki_handler)
+
+            # Log a test message to verify Loki works
+            test_logger = logging.getLogger("loki_test")
+            test_logger.setLevel(resolved_level)
+            test_logger.addHandler(loki_handler)
+            test_logger.info("Loki handler test message - if you see this in Grafana, Loki is working!")
         except ImportError:
             logging.getLogger(__name__).warning(
                 "python-logging-loki is not installed. Loki logging disabled. "
@@ -97,3 +103,7 @@ def configure_logging(
         # Set level to match root (or inherit it)
         if child_logger.level == logging.NOTSET:
             child_logger.setLevel(resolved_level)
+
+    # Test that backend loggers work
+    backend_test_logger = logging.getLogger("backend.test")
+    backend_test_logger.info("Backend logger test - this should appear in logs and Loki")

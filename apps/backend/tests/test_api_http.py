@@ -48,6 +48,9 @@ class StubConfig:
     """Minimal config stub for testing."""
 
     telegram_webhook_url = None
+    log_level = "INFO"
+    loki_url = None
+    loki_labels = {}
 
 
 class StubFlashcardService:

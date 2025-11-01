@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ..logging import configure_logging
 from .dependencies import build_container, set_container
 from .routers import decks, training, telegram
 
@@ -18,6 +19,13 @@ def create_api() -> FastAPI:
     """Produce the FastAPI application instance to be mounted by an ASGI server."""
     container = build_container()
     set_container(container)
+
+    # Configure logging with Loki support
+    configure_logging(
+        level=container.config.log_level,
+        loki_url=container.config.loki_url,
+        loki_labels=container.config.loki_labels,
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):

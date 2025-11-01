@@ -10,6 +10,9 @@ services:
       DB_NAME: ${DB_NAME:-lang_agent}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      LOKI_URL: ${LOKI_URL:-}
+      LOKI_LABELS: ${LOKI_LABELS:-}
+      APP_ENV: ${APP_ENV:-production}
     command: ["uvicorn", "backend.api.app:create_api", "--factory", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"

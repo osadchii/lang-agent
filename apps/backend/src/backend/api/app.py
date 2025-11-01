@@ -35,10 +35,17 @@ def create_api() -> FastAPI:
 
         # Set up Telegram webhook if URL is configured
         if container.config.telegram_webhook_url:
+            logger.info(
+                "Setting up Telegram webhook: url=%s",
+                container.config.telegram_webhook_url,
+            )
             try:
                 await container.telegram_bot.set_webhook(container.config.telegram_webhook_url)
+                logger.info("Telegram webhook configured successfully")
             except Exception:
                 logger.exception("Failed to set Telegram webhook")
+        else:
+            logger.warning("TELEGRAM_WEBHOOK_URL not set - bot will not receive updates!")
 
         try:
             yield
@@ -47,6 +54,7 @@ def create_api() -> FastAPI:
             if container.config.telegram_webhook_url:
                 try:
                     await container.telegram_bot.delete_webhook()
+                    logger.info("Telegram webhook deleted")
                 except Exception:
                     logger.exception("Failed to delete Telegram webhook")
 

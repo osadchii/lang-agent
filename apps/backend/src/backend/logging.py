@@ -29,6 +29,8 @@ def configure_logging(
     handlers: list[logging.Handler] = []
 
     # Console handler (always enabled)
+    # Force unbuffered output to ensure logs appear immediately in Docker
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(resolved_level)
     console_handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
@@ -95,7 +97,7 @@ def configure_logging(
     # This is important because loggers are created during module import
     # before configure_logging is called
     logger_names = list(logging.Logger.manager.loggerDict.keys())
-    logger.info("Configuring %d existing loggers: %s", len(logger_names), logger_names)
+    logger.info("Configuring %d existing loggers (backend.*, aiogram.*, etc.)", len(logger_names))
 
     for name in logger_names:
         child_logger = logging.getLogger(name)
@@ -107,14 +109,23 @@ def configure_logging(
         if child_logger.level == logging.NOTSET:
             child_logger.setLevel(resolved_level)
 
-        logger.info(
-            "Configured logger: name=%s, level=%s, propagate=%s, handlers=%d",
-            name,
-            logging.getLevelName(child_logger.level),
-            child_logger.propagate,
-            len(child_logger.handlers),
-        )
-
     # Test that backend loggers work
     backend_test_logger = logging.getLogger("backend.test")
     backend_test_logger.info("Backend logger test - this should appear in logs and Loki")
+
+    # Install a factory to ensure all future loggers also propagate correctly
+    old_logger_class = logging.getLoggerClass()
+
+    class PropagatingLogger(old_logger_class):  # type: ignore[misc,valid-type]
+        """Custom logger that ensures propagation is always enabled."""
+
+        def __init__(self, name: str, level: int = logging.NOTSET) -> None:
+            super().__init__(name, level)
+            # Ensure propagation for all new loggers
+            self.propagate = True
+            # Don't add handlers to child loggers - let them propagate to root
+            if name != "root":
+                self.handlers = []
+
+    logging.setLoggerClass(PropagatingLogger)
+    logger.info("Installed custom logger class to ensure all future loggers propagate to root")

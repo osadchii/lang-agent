@@ -21,6 +21,9 @@ def configure_logging(
         loki_url: Optional Loki endpoint URL (e.g., http://loki:3100/loki/api/v1/push)
         loki_labels: Optional labels for Loki logs (e.g., {"application": "lang-agent", "environment": "production"})
     """
+    # Emergency debug output before any logging setup
+    print(f"[LOGGING INIT] Starting configure_logging with level={level}, loki_url={loki_url}", flush=True)
+
     try:
         resolved_level = getattr(logging, level.upper())
     except AttributeError:
@@ -29,8 +32,6 @@ def configure_logging(
     handlers: list[logging.Handler] = []
 
     # Console handler (always enabled)
-    # Force unbuffered output to ensure logs appear immediately in Docker
-    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(resolved_level)
     console_handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
@@ -38,6 +39,7 @@ def configure_logging(
 
     # Loki handler (optional)
     if loki_url:
+        print(f"[LOGGING INIT] Configuring Loki handler for {loki_url}", flush=True)
         try:
             import socket
             from logging_loki import LokiHandler  # type: ignore[import-not-found]
@@ -50,6 +52,8 @@ def configure_logging(
             if "job" not in labels:
                 labels["job"] = "lang-agent"
 
+            print(f"[LOGGING INIT] Creating LokiHandler with labels: {labels}", flush=True)
+
             # Create Loki handler with immediate sending (no buffering)
             loki_handler = LokiHandler(
                 url=loki_url,
@@ -60,26 +64,32 @@ def configure_logging(
             loki_handler.setLevel(resolved_level)
             handlers.append(loki_handler)
 
+            print(f"[LOGGING INIT] LokiHandler created and added to handlers", flush=True)
+
             # Log a test message to verify Loki works
             test_logger = logging.getLogger("loki_test")
             test_logger.setLevel(resolved_level)
             test_logger.addHandler(loki_handler)
             test_logger.info("Loki handler test message - if you see this in Grafana, Loki is working!")
         except ImportError:
+            print(f"[LOGGING INIT] ERROR: python-logging-loki not installed", flush=True)
             logging.getLogger(__name__).warning(
                 "python-logging-loki is not installed. Loki logging disabled. "
                 "Install with: pip install python-logging-loki"
             )
-        except Exception:
+        except Exception as e:
+            print(f"[LOGGING INIT] ERROR: Failed to configure Loki handler: {e}", flush=True)
             logging.getLogger(__name__).exception("Failed to configure Loki handler")
 
     # Configure root logger
+    print(f"[LOGGING INIT] Configuring root logger with {len(handlers)} handlers", flush=True)
     root_logger = logging.getLogger()
     root_logger.setLevel(resolved_level)
     # Clear existing handlers and add new ones
     root_logger.handlers.clear()
     for handler in handlers:
         root_logger.addHandler(handler)
+    print(f"[LOGGING INIT] Root logger configured. Testing...", flush=True)
 
     logging.captureWarnings(True)
 
@@ -114,18 +124,23 @@ def configure_logging(
     backend_test_logger.info("Backend logger test - this should appear in logs and Loki")
 
     # Install a factory to ensure all future loggers also propagate correctly
-    old_logger_class = logging.getLoggerClass()
+    try:
+        old_logger_class = logging.getLoggerClass()
 
-    class PropagatingLogger(old_logger_class):  # type: ignore[misc,valid-type]
-        """Custom logger that ensures propagation is always enabled."""
+        class PropagatingLogger(old_logger_class):  # type: ignore[misc,valid-type]
+            """Custom logger that ensures propagation is always enabled."""
 
-        def __init__(self, name: str, level: int = logging.NOTSET) -> None:
-            super().__init__(name, level)
-            # Ensure propagation for all new loggers
-            self.propagate = True
-            # Don't add handlers to child loggers - let them propagate to root
-            if name != "root":
-                self.handlers = []
+            def __init__(self, name: str, level: int = logging.NOTSET) -> None:
+                super().__init__(name, level)
+                # Ensure propagation for all new loggers
+                self.propagate = True
+                # Don't add handlers to child loggers - let them propagate to root
+                if name != "root":
+                    self.handlers = []
 
-    logging.setLoggerClass(PropagatingLogger)
-    logger.info("Installed custom logger class to ensure all future loggers propagate to root")
+        logging.setLoggerClass(PropagatingLogger)
+        logger.info("Installed custom logger class to ensure all future loggers propagate to root")
+    except Exception:
+        logger.exception("Failed to install custom logger class - continuing with default")
+
+    print(f"[LOGGING INIT] configure_logging completed successfully!", flush=True)

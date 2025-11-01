@@ -49,6 +49,18 @@ def configure_logging(
             if "job" not in labels:
                 labels["job"] = "lang-agent"
 
+            # CRITICAL: Disable urllib3 and requests logging BEFORE creating Loki handler
+            # to prevent infinite recursion when Loki is unreachable
+            logging.getLogger("urllib3").setLevel(logging.WARNING)
+            logging.getLogger("urllib3").propagate = False
+            logging.getLogger("requests").setLevel(logging.WARNING)
+            logging.getLogger("requests").propagate = False
+
+            # Create a filter to prevent urllib3/requests logs from going to Loki
+            class NoHTTPLibLogsFilter(logging.Filter):
+                def filter(self, record: logging.LogRecord) -> bool:
+                    return not record.name.startswith(("urllib3", "requests"))
+
             # Create Loki handler with immediate sending (no buffering)
             loki_handler = LokiHandler(
                 url=loki_url,
@@ -57,13 +69,8 @@ def configure_logging(
                 auth=None,  # Set if using basic auth
             )
             loki_handler.setLevel(resolved_level)
+            loki_handler.addFilter(NoHTTPLibLogsFilter())
             handlers.append(loki_handler)
-
-            # Log a test message to verify Loki works
-            test_logger = logging.getLogger("loki_test")
-            test_logger.setLevel(resolved_level)
-            test_logger.addHandler(loki_handler)
-            test_logger.info("Loki handler test message - if you see this in Grafana, Loki is working!")
         except ImportError:
             logging.getLogger(__name__).warning(
                 "python-logging-loki is not installed. Loki logging disabled. "

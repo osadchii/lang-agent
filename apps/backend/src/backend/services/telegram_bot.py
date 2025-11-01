@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest
@@ -68,6 +69,7 @@ class TelegramBotRunner:
 
     async def _handle_add_command(self, message: Message) -> None:
         """Process the /add command for creating flashcards."""
+        start_time = time.perf_counter()
         user = message.from_user
         if user is None:
             logger.debug("Skipping /add without sender: %s", message.message_id)
@@ -75,6 +77,13 @@ class TelegramBotRunner:
 
         profile = self._to_profile(user)
         words = self._extract_words(message.text or "")
+
+        logger.info(
+            "Bot /add command: user_id=%d, words_count=%d",
+            user.id,
+            len(words),
+        )
+
         if not words:
             await self._safe_reply(
                 message,
@@ -84,8 +93,21 @@ class TelegramBotRunner:
 
         try:
             results = await self._flashcards.add_words(profile, words)
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+            logger.info(
+                "Bot /add command processed: user_id=%d, duration_ms=%.2f, results=%d",
+                user.id,
+                elapsed_ms,
+                len(results),
+            )
         except Exception:  # pragma: no cover - defensive logging
-            logger.exception("Failed to add flashcards for user %s", profile.user_id)
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "Bot /add command failed: user_id=%d, duration_ms=%.2f",
+                user.id,
+                elapsed_ms,
+            )
             await self._safe_reply(message, "Не удалось добавить карточки. Попробуйте позже.")
             return
 
@@ -94,6 +116,7 @@ class TelegramBotRunner:
 
     async def _handle_flashcard_command(self, message: Message) -> None:
         """Serve the next due flashcard to the learner."""
+        start_time = time.perf_counter()
         user = message.from_user
         if user is None:
             logger.debug("Skipping /flashcard without sender: %s", message.message_id)
@@ -102,18 +125,38 @@ class TelegramBotRunner:
         profile = self._to_profile(user)
         await self._flashcards.ensure_user(profile)
 
+        logger.info("Bot /flashcard command: user_id=%d", user.id)
+
         try:
             study_card = await self._flashcards.get_next_card(user_id=profile.user_id)
-        except Exception:  # pragma: no cover - defensive logging
-            logger.exception("Failed to fetch next flashcard for user %s", profile.user_id)
-            await self._safe_reply(message, "Не удалось получить карточку. Попробуйте позже.")
-            return
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
 
-        if study_card is None:
-            await self._safe_reply(
-                message,
-                "Пока нет карточек для повторения. Добавьте новые через /add.",
+            if study_card is None:
+                logger.info(
+                    "Bot /flashcard no cards: user_id=%d, duration_ms=%.2f",
+                    user.id,
+                    elapsed_ms,
+                )
+                await self._safe_reply(
+                    message,
+                    "Пока нет карточек для повторения. Добавьте новые через /add.",
+                )
+                return
+
+            logger.info(
+                "Bot /flashcard served: user_id=%d, duration_ms=%.2f, card_id=%d",
+                user.id,
+                elapsed_ms,
+                study_card.user_card_id,
             )
+        except Exception:  # pragma: no cover - defensive logging
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "Bot /flashcard failed: user_id=%d, duration_ms=%.2f",
+                user.id,
+                elapsed_ms,
+            )
+            await self._safe_reply(message, "Не удалось получить карточку. Попробуйте позже.")
             return
 
         prompt, _ = self._flashcards.choose_prompt_side(study_card.card)
@@ -208,23 +251,45 @@ class TelegramBotRunner:
 
     async def _handle_text_message(self, message: Message) -> None:
         """Process inbound text messages."""
+        start_time = time.perf_counter()
         user = message.from_user
         if user is None:
             logger.debug("Skipping message without sender: %s", message.message_id)
             return
+
+        message_text = message.text or ""
+        logger.info(
+            "Bot message received: user_id=%d, username=%s, message_length=%d",
+            user.id,
+            user.username or "unknown",
+            len(message_text),
+        )
 
         payload = UserMessagePayload(
             user_id=user.id,
             username=user.username,
             first_name=user.first_name,
             last_name=user.last_name,
-            text=message.text or "",
+            text=message_text,
         )
 
         try:
             reply = await self._conversation.handle_user_message(payload)
-        except Exception as ex:  # pragma: no cover - defensive logging
-            logger.exception("Failed to handle message %s", message.message_id)
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+            logger.info(
+                "Bot message processed: user_id=%d, duration_ms=%.2f, reply_length=%d",
+                user.id,
+                elapsed_ms,
+                len(reply),
+            )
+        except Exception:  # pragma: no cover - defensive logging
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "Bot message failed: user_id=%d, duration_ms=%.2f",
+                user.id,
+                elapsed_ms,
+            )
             await self._safe_reply(message, "Произошла ошибка. Попробуйте ещё раз позже.")
             raise
 

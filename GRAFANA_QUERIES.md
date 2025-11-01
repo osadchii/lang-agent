@@ -23,9 +23,38 @@
 
 ### 3. Telegram бот
 ```logql
-{job="lang-agent"} |= "Telegram"
-{job="lang-agent"} |= "aiogram"
-{job="lang-agent"} |~ "Telegram|aiogram"
+# Все обращения к боту
+{job="lang-agent"} |= "Bot message received"
+
+# Обработанные сообщения с временем
+{job="lang-agent"} |= "Bot message processed" |= "duration_ms"
+
+# Ошибки при обработке
+{job="lang-agent"} |= "Bot message failed"
+
+# Команды /add
+{job="lang-agent"} |= "Bot /add command"
+
+# Команды /flashcard
+{job="lang-agent"} |= "Bot /flashcard"
+```
+
+### 4. LLM запросы (OpenAI)
+```logql
+# Все запросы к LLM
+{job="lang-agent"} |= "LLM request"
+
+# Успешные ответы с временем
+{job="lang-agent"} |= "LLM response" |= "duration_ms"
+
+# Генерация флеш-карт
+{job="lang-agent"} |= "Flashcard generation"
+
+# Медленные запросы (>2 секунд)
+{job="lang-agent"} |~ "duration_ms=([2-9]\\d{3}|\\d{4,})"
+
+# Ошибки LLM
+{job="lang-agent"} |= "LLM request failed"
 ```
 
 ### 4. API запросы
@@ -103,9 +132,49 @@ sum(rate({job="lang-agent"} |= "ERROR" [5m])) by (environment)
 sum by(level) (count_over_time({job="lang-agent"}[1m]))
 ```
 
+### Среднее время ответа LLM
+```logql
+avg_over_time(
+  {job="lang-agent"}
+  |= "LLM response"
+  | regexp `duration_ms=(?P<duration>[\\d.]+)`
+  | unwrap duration [5m]
+)
+```
+
+### Среднее время обработки сообщений бота
+```logql
+avg_over_time(
+  {job="lang-agent"}
+  |= "Bot message processed"
+  | regexp `duration_ms=(?P<duration>[\\d.]+)`
+  | unwrap duration [5m]
+)
+```
+
+### Количество обращений к боту за час
+```logql
+sum(count_over_time({job="lang-agent"} |= "Bot message received" [1h]))
+```
+
+### Количество запросов к LLM за час
+```logql
+sum(count_over_time({job="lang-agent"} |= "LLM request" [1h]))
+```
+
 ### Top 10 самых частых сообщений
 ```logql
 topk(10, sum by (msg) (count_over_time({job="lang-agent"}[5m])))
+```
+
+### P95 время ответа LLM
+```logql
+quantile_over_time(0.95,
+  {job="lang-agent"}
+  |= "LLM response"
+  | regexp `duration_ms=(?P<duration>[\\d.]+)`
+  | unwrap duration [5m]
+)
 ```
 
 ## Troubleshooting

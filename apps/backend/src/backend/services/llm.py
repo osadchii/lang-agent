@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
+import time
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Protocol, cast
 
 from openai import AsyncOpenAI
 from openai.types.responses import Response, ResponseInputItemParam
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient(Protocol):
@@ -41,6 +45,8 @@ class OpenAIChatClient:
         history: Iterable[Mapping[str, str]] | None = None,
     ) -> str:
         """Generate a reply using the configured OpenAI model."""
+        start_time = time.perf_counter()
+
         conversation: list[dict[str, str]] = [
             {"role": "system", "content": self.system_prompt},
         ]
@@ -55,12 +61,37 @@ class OpenAIChatClient:
 
         conversation.append({"role": "user", "content": user_message})
 
-        response = await self._client.responses.create(
-            model=self.model,
-            input=cast(list[ResponseInputItemParam], conversation),
+        logger.info(
+            "LLM request: model=%s, message_length=%d, history_entries=%d",
+            self.model,
+            len(user_message),
+            len(list(history)) if history else 0,
         )
 
-        return _extract_first_text(response)
+        try:
+            response = await self._client.responses.create(
+                model=self.model,
+                input=cast(list[ResponseInputItemParam], conversation),
+            )
+            result = _extract_first_text(response)
+
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.info(
+                "LLM response: model=%s, duration_ms=%.2f, response_length=%d",
+                self.model,
+                elapsed_ms,
+                len(result),
+            )
+
+            return result
+        except Exception:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "LLM request failed: model=%s, duration_ms=%.2f",
+                self.model,
+                elapsed_ms,
+            )
+            raise
 
 
 @dataclass(frozen=True)
@@ -102,50 +133,78 @@ class OpenAIFlashcardGenerator:
 
     async def generate_flashcard(self, *, prompt_word: str) -> FlashcardContent:
         """Request structured flashcard content for the supplied word."""
-        response = await self._client.responses.create(
-            model=self.model,
-            input=[
-                {"role": "system", "content": self.system_prompt},
-                {
-                    "role": "user",
-                    "content": (
-                        "Создай карточку для изучения греческого языка русскоязычным учеником.\n"
-                        f"Исходное слово или фраза (может быть на русском или греческом): \"{prompt_word.strip()}\".\n"
-                        "Определи язык ввода и часть речи. Поле source_text должно содержать русскую форму слова или выражения. "
-                        "Поле target_text должно содержать греческую форму (для существительных обязательно с артиклем). "
-                        "Если запрос был на греческом, переведи его на русский и заполни source_text переводом, а target_text оставь в греческой форме. "
-                        "Если запрос был на русском, сохрани исходный текст в source_text и дай греческий перевод в target_text. "
-                        "Добавь пример предложения на греческом и его перевод на русский. "
-                        "Верни ответ строго в формате JSON без пояснений и без Markdown, "
-                        "со структурой:\n"
-                        "{\n"
-                        '  "source_text": "",\n'
-                        '  "target_text": "",\n'
-                        '  "example_sentence": "",\n'
-                        '  "example_translation": "",\n'
-                        '  "part_of_speech": "noun|verb|... (опционально)",\n'
-                        '  "notes": "опционально"\n'
-                        "}\n"
-                        "Если данных нет, оставляй поле пустой строкой."
-                    ),
-                },
-            ],
+        start_time = time.perf_counter()
+
+        logger.info(
+            "Flashcard generation request: model=%s, word=%s",
+            self.model,
+            prompt_word.strip(),
         )
 
-        payload = _parse_flashcard_json(_extract_first_text(response))
-        extra = {key: value for key, value in payload.items() if key not in {"source_text", "target_text", "example_sentence", "example_translation", "part_of_speech"}}
+        try:
+            response = await self._client.responses.create(
+                model=self.model,
+                input=[
+                    {"role": "system", "content": self.system_prompt},
+                    {
+                        "role": "user",
+                        "content": (
+                            "Создай карточку для изучения греческого языка русскоязычным учеником.\n"
+                            f"Исходное слово или фраза (может быть на русском или греческом): \"{prompt_word.strip()}\".\n"
+                            "Определи язык ввода и часть речи. Поле source_text должно содержать русскую форму слова или выражения. "
+                            "Поле target_text должно содержать греческую форму (для существительных обязательно с артиклем). "
+                            "Если запрос был на греческом, переведи его на русский и заполни source_text переводом, а target_text оставь в греческой форме. "
+                            "Если запрос был на русском, сохрани исходный текст в source_text и дай греческий перевод в target_text. "
+                            "Добавь пример предложения на греческом и его перевод на русский. "
+                            "Верни ответ строго в формате JSON без пояснений и без Markdown, "
+                            "со структурой:\n"
+                            "{\n"
+                            '  "source_text": "",\n'
+                            '  "target_text": "",\n'
+                            '  "example_sentence": "",\n'
+                            '  "example_translation": "",\n'
+                            '  "part_of_speech": "noun|verb|... (опционально)",\n'
+                            '  "notes": "опционально"\n'
+                            "}\n"
+                            "Если данных нет, оставляй поле пустой строкой."
+                        ),
+                    },
+                ],
+            )
 
-        return FlashcardContent(
-            source_text=payload.get("source_text", prompt_word).strip(),
-            target_text=_ensure_article_for_noun(
-                payload.get("target_text", "").strip(),
-                payload.get("part_of_speech"),
-            ),
-            example_sentence=payload.get("example_sentence", "").strip(),
-            example_translation=payload.get("example_translation", "").strip(),
-            part_of_speech=_safe_strip(payload.get("part_of_speech")),
-            extra=extra or None,
-        )
+            payload = _parse_flashcard_json(_extract_first_text(response))
+            extra = {key: value for key, value in payload.items() if key not in {"source_text", "target_text", "example_sentence", "example_translation", "part_of_speech"}}
+
+            result = FlashcardContent(
+                source_text=payload.get("source_text", prompt_word).strip(),
+                target_text=_ensure_article_for_noun(
+                    payload.get("target_text", "").strip(),
+                    payload.get("part_of_speech"),
+                ),
+                example_sentence=payload.get("example_sentence", "").strip(),
+                example_translation=payload.get("example_translation", "").strip(),
+                part_of_speech=_safe_strip(payload.get("part_of_speech")),
+                extra=extra or None,
+            )
+
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.info(
+                "Flashcard generation success: word=%s, duration_ms=%.2f, source=%s, target=%s",
+                prompt_word.strip(),
+                elapsed_ms,
+                result.source_text,
+                result.target_text,
+            )
+
+            return result
+        except Exception:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "Flashcard generation failed: word=%s, duration_ms=%.2f",
+                prompt_word.strip(),
+                elapsed_ms,
+            )
+            raise
 
 
 def _extract_first_text(response: Response) -> str:

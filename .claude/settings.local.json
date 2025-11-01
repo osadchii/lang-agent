@@ -3,7 +3,8 @@
     "allow": [
       "Bash(Select-Object Id, ProcessName, CommandLine -First 20)",
       "Bash(python test_logging.py:*)",
-      "Bash(timeout 5 python:*)"
+      "Bash(timeout 5 python:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

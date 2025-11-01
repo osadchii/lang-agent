@@ -7,6 +7,43 @@ import sys
 
 DEFAULT_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 
+# Global storage for handlers configured by configure_logging()
+_configured_handlers: list[logging.Handler] = []
+_logging_level: int = logging.INFO
+
+
+def configure_logger(logger: logging.Logger) -> None:
+    """
+    Apply configured handlers to a specific logger instance.
+
+    This function should be called from the logger factory for each new logger
+    to ensure it has the correct handlers (console + Loki) attached directly.
+
+    Args:
+        logger: Logger instance to configure
+
+    Note:
+        This function is safe to call multiple times on the same logger.
+        It will clear existing handlers before applying the configured ones.
+    """
+    if not _configured_handlers:
+        # Logging not yet configured, skip
+        return
+
+    # Clear any existing handlers
+    logger.handlers.clear()
+
+    # Add all configured handlers (console + Loki)
+    for handler in _configured_handlers:
+        logger.addHandler(handler)
+
+    # Set logger level
+    logger.setLevel(_logging_level)
+
+    # Disable propagation since we're attaching handlers directly
+    # This prevents duplicate logs
+    logger.propagate = False
+
 
 def configure_logging(
     level: str,
@@ -79,6 +116,11 @@ def configure_logging(
         except Exception:
             logging.getLogger(__name__).exception("Failed to configure Loki handler")
 
+    # Store handlers and level globally for use by configure_logger()
+    global _configured_handlers, _logging_level
+    _configured_handlers = handlers.copy()
+    _logging_level = resolved_level
+
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(resolved_level)
@@ -102,51 +144,28 @@ def configure_logging(
     if loki_url and any(isinstance(h, type(h)) and "Loki" in type(h).__name__ for h in handlers):
         logger.info("Loki logging enabled (url=%s, labels=%s)", loki_url, loki_labels or {})
 
-    # Ensure all existing loggers propagate to the root handler
+    # Reconfigure all existing loggers to use the new handlers
     # This is important because loggers are created during module import
     # before configure_logging is called
     logger_names = list(logging.Logger.manager.loggerDict.keys())
     logger.info("Configuring %d existing loggers (backend.*, aiogram.*, etc.)", len(logger_names))
 
     for name in logger_names:
-        child_logger = logging.getLogger(name)
-        # Clear handlers from child loggers so they propagate to root
-        child_logger.handlers.clear()
-        # Ensure propagation is enabled
-        child_logger.propagate = True
-        # Set level to NOTSET so it inherits from root
-        child_logger.setLevel(logging.NOTSET)
+        if name != "root" and not name.startswith(("urllib3", "requests")):
+            child_logger = logging.getLogger(name)
+            configure_logger(child_logger)
 
     # Test that backend loggers work
     backend_test_logger = logging.getLogger("backend.test")
+    configure_logger(backend_test_logger)
     backend_test_logger.info("Backend logger test - this should appear in logs and Loki")
-
-    # Install a factory to ensure all future loggers also propagate correctly
-    try:
-        old_logger_class = logging.getLoggerClass()
-
-        class PropagatingLogger(old_logger_class):  # type: ignore[misc,valid-type]
-            """Custom logger that ensures propagation is always enabled."""
-
-            def __init__(self, name: str, level: int = logging.NOTSET) -> None:
-                super().__init__(name, level)
-                # Ensure propagation for all new loggers
-                self.propagate = True
-                # Don't add handlers to child loggers - let them propagate to root
-                if name != "root":
-                    self.handlers = []
-
-        logging.setLoggerClass(PropagatingLogger)
-        logger.info("Installed custom logger class to ensure all future loggers propagate to root")
-    except Exception:
-        logger.exception("Failed to install custom logger class - continuing with default")
 
     # Mark logging as configured so the factory knows it's safe
     from .logger_factory import mark_logging_configured, get_pending_loggers
 
     mark_logging_configured()
 
-    # Log information about loggers created before configuration
+    # Reconfigure loggers that were created before configure_logging
     pending = get_pending_loggers()
     if pending:
         logger.debug(
@@ -154,3 +173,7 @@ def configure_logging(
             len(pending),
             ", ".join(pending[:5]) + ("..." if len(pending) > 5 else ""),
         )
+        # Apply handlers to pending loggers
+        for name in pending:
+            pending_logger = logging.getLogger(name)
+            configure_logger(pending_logger)

@@ -32,9 +32,9 @@ def get_logger(name: str) -> logging.Logger:
     Get a properly configured logger instance.
 
     This factory function ensures that all loggers:
-    1. Are created with the correct propagation settings
-    2. Don't add their own handlers (use root logger's handlers)
-    3. Work correctly with Loki when configured
+    1. Are created with the correct handlers (console + Loki)
+    2. Work correctly regardless of creation order
+    3. Have all logs properly routed to configured destinations
 
     Args:
         name: Logger name (typically __name__ of the calling module)
@@ -53,20 +53,15 @@ def get_logger(name: str) -> logging.Logger:
     # Always use the standard logging.getLogger to maintain singleton behavior
     logger = logging.getLogger(name)
 
-    # CRITICAL: Force configuration even if logging was already configured
-    # This ensures all loggers work correctly regardless of creation order
-    if name != "root":
-        # Child loggers should propagate to root and not have their own handlers
-        logger.propagate = True
-        # Remove any handlers that might have been added
-        logger.handlers.clear()
-        # Set level to NOTSET so it inherits from root
-        if logger.level != logging.NOTSET:
-            logger.level = logging.NOTSET
-
     # Track loggers created before configuration
     if not _logging_configured and name not in _pending_loggers:
         _pending_loggers[name] = logger
+
+    # Apply handlers directly to this logger
+    # This is called from logging.py so we need to import here to avoid circular dependency
+    if _logging_configured and name != "root":
+        from .logging import configure_logger
+        configure_logger(logger)
 
     return logger
 
@@ -85,7 +80,7 @@ def reconfigure_all_loggers() -> None:
     Force reconfiguration of all existing loggers.
 
     This ensures that all loggers (including ones created by third-party libraries
-    like aiogram) are properly configured to propagate to root logger.
+    like aiogram) are properly configured with the correct handlers.
 
     Call this after configure_logging() if you notice logs are missing from
     specific libraries.
@@ -93,16 +88,13 @@ def reconfigure_all_loggers() -> None:
     if not _logging_configured:
         return
 
-    root_logger = logging.getLogger()
-    root_level = root_logger.level
+    from .logging import configure_logger
 
     # Get all existing loggers
     logger_names = list(logging.Logger.manager.loggerDict.keys())
 
     for name in logger_names:
-        logger_obj = logging.getLogger(name)
         if name != "root" and not name.startswith(("urllib3", "requests")):
-            # Force proper configuration
-            logger_obj.handlers.clear()
-            logger_obj.propagate = True
-            logger_obj.setLevel(logging.NOTSET)  # Inherit from root
+            logger_obj = logging.getLogger(name)
+            # Apply handlers directly to this logger
+            configure_logger(logger_obj)

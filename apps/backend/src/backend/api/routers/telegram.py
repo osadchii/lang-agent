@@ -30,8 +30,16 @@ async def telegram_webhook(
         # Log through multiple loggers to test which one works
         print(f"[WEBHOOK DEBUG] About to log to root logger", file=sys.stderr, flush=True)
         root_logger = logging.getLogger()
+
+        # Check root logger configuration
+        print(f"[WEBHOOK DEBUG] Root logger: level={root_logger.level}, handlers={len(root_logger.handlers)}, handler_types={[type(h).__name__ for h in root_logger.handlers]}", file=sys.stderr, flush=True)
+
+        # Try to log
         root_logger.info("[ROOT] Webhook received: update_id=%s", update_data.get("update_id"))
         print(f"[WEBHOOK DEBUG] Root logger done", file=sys.stderr, flush=True)
+
+        # Check child logger configuration
+        print(f"[WEBHOOK DEBUG] Child logger: name={logger.name}, level={logger.level}, handlers={len(logger.handlers)}, propagate={logger.propagate}", file=sys.stderr, flush=True)
 
         logger.info(
             "Webhook received: update_id=%s, has_message=%s",
@@ -40,15 +48,16 @@ async def telegram_webhook(
         )
         print(f"[WEBHOOK DEBUG] Child logger done", file=sys.stderr, flush=True)
 
-        # Also log logger configuration for debugging
-        logger.info(
-            "Logger config: name=%s, level=%s, propagate=%s, handlers=%s, parent=%s",
-            logger.name,
-            logging.getLevelName(logger.level),
-            logger.propagate,
-            [type(h).__name__ for h in logger.handlers],
-            logger.parent.name if logger.parent else None,
-        )
+        # Try logging directly through console handler
+        if root_logger.handlers:
+            print(f"[WEBHOOK DEBUG] Attempting direct handler write", file=sys.stderr, flush=True)
+            record = root_logger.makeRecord(
+                root_logger.name, logging.INFO, __file__, 0,
+                "[DIRECT] This is a direct write to handler", (), None
+            )
+            root_logger.handlers[0].emit(record)
+            print(f"[WEBHOOK DEBUG] Direct handler write complete", file=sys.stderr, flush=True)
+
         print(f"[WEBHOOK DEBUG] All logging complete", file=sys.stderr, flush=True)
     except Exception as e:
         print(f"[WEBHOOK DEBUG] ERROR during logging: {e}", file=sys.stderr, flush=True)

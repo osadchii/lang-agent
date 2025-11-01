@@ -21,7 +21,7 @@ def _ensure_env_loaded() -> None:
         return
     if load_dotenv is not None:
         try:
-            load_dotenv(interpolate=False)
+            load_dotenv(interpolate=True)
         except TypeError:  # pragma: no cover - older python-dotenv versions
             load_dotenv()
     _ENV_LOADED = True
@@ -38,6 +38,7 @@ class AppConfig:
     openai_model: str
     database_url: str
     openai_system_prompt: str
+    telegram_webhook_url: str | None
 
     @classmethod
     def load(cls) -> "AppConfig":
@@ -62,6 +63,7 @@ class AppConfig:
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
             database_url=_resolve_database_url(),
             openai_system_prompt=os.getenv("OPENAI_SYSTEM_PROMPT", GREEK_TEACHER_PROMPT),
+            telegram_webhook_url=os.getenv("TELEGRAM_WEBHOOK_URL"),
         )
 
 

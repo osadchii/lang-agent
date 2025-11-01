@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .dependencies import build_container, set_container
-from .routers import decks, training
+from .routers import decks, training, telegram
+
+logger = logging.getLogger(__name__)
 
 
 def create_api() -> FastAPI:
@@ -19,9 +22,24 @@ def create_api() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         await container.database.initialize()
+
+        # Set up Telegram webhook if URL is configured
+        if container.config.telegram_webhook_url:
+            try:
+                await container.telegram_bot.set_webhook(container.config.telegram_webhook_url)
+            except Exception:
+                logger.exception("Failed to set Telegram webhook")
+
         try:
             yield
         finally:
+            # Clean up webhook on shutdown
+            if container.config.telegram_webhook_url:
+                try:
+                    await container.telegram_bot.delete_webhook()
+                except Exception:
+                    logger.exception("Failed to delete Telegram webhook")
+
             await container.database.dispose()
 
     app = FastAPI(
@@ -45,4 +63,5 @@ def create_api() -> FastAPI:
 
     app.include_router(decks.router, prefix="/api")
     app.include_router(training.router, prefix="/api")
+    app.include_router(telegram.router, prefix="/api")
     return app

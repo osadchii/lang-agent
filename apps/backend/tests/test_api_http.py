@@ -34,6 +34,22 @@ class StubDatabase:
         self.disposed = True
 
 
+class StubTelegramBot:
+    """Minimal Telegram bot stub for testing."""
+
+    async def set_webhook(self, url: str) -> None:
+        pass
+
+    async def delete_webhook(self) -> None:
+        pass
+
+
+class StubConfig:
+    """Minimal config stub for testing."""
+
+    telegram_webhook_url = None
+
+
 class StubFlashcardService:
     """Stub flashcard service implementing the methods used by the API."""
 
@@ -135,7 +151,14 @@ def test_client(monkeypatch) -> tuple[TestClient, StubFlashcardService, StubData
 
     stub_service = StubFlashcardService()
     stub_db = StubDatabase()
-    container = APIContainer(config=object(), database=stub_db, flashcards=stub_service)  # type: ignore[arg-type]
+    stub_bot = StubTelegramBot()
+    stub_config = StubConfig()
+    container = APIContainer(
+        config=stub_config,  # type: ignore[arg-type]
+        database=stub_db,
+        flashcards=stub_service,
+        telegram_bot=stub_bot,  # type: ignore[arg-type]
+    )
 
     monkeypatch.setattr("backend.api.app.build_container", lambda: container)
 

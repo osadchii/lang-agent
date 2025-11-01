@@ -8,7 +8,7 @@ import re
 from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, ErrorEvent, Message, User
+from aiogram.types import CallbackQuery, ErrorEvent, Message, Update, User
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .conversation import ConversationService, UserMessagePayload
@@ -34,6 +34,7 @@ class TelegramBotRunner:
         self._dispatcher = Dispatcher()
         self._conversation = conversation
         self._flashcards = flashcards
+        self._token = token
 
         self._dispatcher.message.register(self._handle_add_command, Command("add"))
         self._dispatcher.message.register(self._handle_flashcard_command, Command("flashcard"))
@@ -41,10 +42,29 @@ class TelegramBotRunner:
         self._dispatcher.callback_query.register(self._handle_flashcard_callback, F.data.startswith(_FLASHCARD_CALLBACK_PREFIX))
         self._dispatcher.errors.register(self._handle_error)
 
-    async def start(self) -> None:
-        """Begin polling for Telegram updates."""
-        logger.info("Starting Telegram polling...")
-        await self._dispatcher.start_polling(self._bot)
+    @property
+    def bot(self) -> Bot:
+        """Expose the bot instance for external use."""
+        return self._bot
+
+    async def set_webhook(self, webhook_url: str) -> None:
+        """Configure Telegram webhook."""
+        logger.info("Setting webhook to %s", webhook_url)
+        await self._bot.set_webhook(
+            url=webhook_url,
+            allowed_updates=self._dispatcher.resolve_used_update_types(),
+            drop_pending_updates=True,
+        )
+        logger.info("Webhook set successfully")
+
+    async def delete_webhook(self) -> None:
+        """Remove Telegram webhook."""
+        logger.info("Deleting webhook")
+        await self._bot.delete_webhook(drop_pending_updates=True)
+
+    async def process_update(self, update: Update) -> None:
+        """Process a single update from Telegram webhook."""
+        await self._dispatcher.feed_update(bot=self._bot, update=update)
 
     async def _handle_add_command(self, message: Message) -> None:
         """Process the /add command for creating flashcards."""

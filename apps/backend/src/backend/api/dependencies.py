@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from fastapi import Header, HTTPException, status
 
 from ..config import AppConfig
+from ..services.conversation import ConversationService
 from ..services.flashcards import FlashcardService, UserProfile
 from ..services.llm import OpenAIChatClient, OpenAIFlashcardGenerator
 from ..services.storage.database import Database
 from ..services.telegram_auth import TelegramAuthError, parse_telegram_user
+from ..services.telegram_bot import TelegramBotRunner
 
 
 @dataclass
@@ -21,6 +23,7 @@ class APIContainer:
     config: AppConfig
     database: Database
     flashcards: FlashcardService
+    telegram_bot: TelegramBotRunner
 
 
 _CONTAINER: APIContainer | None = None
@@ -39,12 +42,27 @@ def build_container() -> APIContainer:
         model=config.openai_model,
         system_prompt="You are a helpful assistant for generating Modern Greek vocabulary for Russian-speaking learners.",
     )
+    conversation = ConversationService(
+        database=database,
+        llm_client=llm_client,
+        model_name=config.openai_model,
+    )
     flashcards = FlashcardService(
         database=database,
         generator=generator,
         llm=llm_client,
     )
-    return APIContainer(config=config, database=database, flashcards=flashcards)
+    telegram_bot = TelegramBotRunner(
+        token=config.telegram_bot_token,
+        conversation=conversation,
+        flashcards=flashcards,
+    )
+    return APIContainer(
+        config=config,
+        database=database,
+        flashcards=flashcards,
+        telegram_bot=telegram_bot,
+    )
 
 
 def set_container(container: APIContainer) -> None:
@@ -63,6 +81,11 @@ def get_container() -> APIContainer:
 def get_flashcard_service() -> FlashcardService:
     """Dependency hook returning the flashcard service."""
     return get_container().flashcards
+
+
+def get_telegram_bot() -> TelegramBotRunner:
+    """Dependency hook returning the Telegram bot runner."""
+    return get_container().telegram_bot
 
 
 def get_authenticated_user(

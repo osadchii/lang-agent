@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import re
 import time
 
@@ -12,10 +11,11 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, ErrorEvent, Message, Update, User
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from ..logger_factory import get_logger
 from .conversation import ConversationService, UserMessagePayload
 from .flashcards import FlashcardCreationResult, FlashcardService, ReviewRating, StudyCard, UserProfile
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _FLASHCARD_CALLBACK_PREFIX = "flashcard"
 _FLASHCARD_SPLIT_PATTERN = re.compile(r"[,\n;]+")
@@ -251,10 +251,6 @@ class TelegramBotRunner:
 
     async def _handle_text_message(self, message: Message) -> None:
         """Process inbound text messages."""
-        # Force debug output to trace execution
-        import sys
-        print(f"[BOT DEBUG] _handle_text_message called!", file=sys.stderr, flush=True)
-
         start_time = time.perf_counter()
         user = message.from_user
         if user is None:
@@ -263,29 +259,12 @@ class TelegramBotRunner:
 
         message_text = message.text or ""
 
-        try:
-            # Log through root logger as well
-            print(f"[BOT DEBUG] About to log to root logger", file=sys.stderr, flush=True)
-            root_logger = logging.getLogger()
-            root_logger.info(
-                "[ROOT] Bot message received: user_id=%d, username=%s, message_length=%d",
-                user.id,
-                user.username or "unknown",
-                len(message_text),
-            )
-            print(f"[BOT DEBUG] Root logger done", file=sys.stderr, flush=True)
-
-            logger.info(
-                "Bot message received: user_id=%d, username=%s, message_length=%d",
-                user.id,
-                user.username or "unknown",
-                len(message_text),
-            )
-            print(f"[BOT DEBUG] Child logger done", file=sys.stderr, flush=True)
-        except Exception as e:
-            print(f"[BOT DEBUG] ERROR during logging: {e}", file=sys.stderr, flush=True)
-            import traceback
-            traceback.print_exc()
+        logger.info(
+            "Bot message received: user_id=%d, username=%s, message_length=%d",
+            user.id,
+            user.username or "unknown",
+            len(message_text),
+        )
 
         payload = UserMessagePayload(
             user_id=user.id,

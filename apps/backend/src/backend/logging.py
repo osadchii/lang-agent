@@ -21,8 +21,6 @@ def configure_logging(
         loki_url: Optional Loki endpoint URL (e.g., http://loki:3100/loki/api/v1/push)
         loki_labels: Optional labels for Loki logs (e.g., {"application": "lang-agent", "environment": "production"})
     """
-    # Emergency debug output before any logging setup
-    print(f"[LOGGING INIT] Starting configure_logging with level={level}, loki_url={loki_url}", flush=True)
 
     try:
         resolved_level = getattr(logging, level.upper())
@@ -39,7 +37,6 @@ def configure_logging(
 
     # Loki handler (optional)
     if loki_url:
-        print(f"[LOGGING INIT] Configuring Loki handler for {loki_url}", flush=True)
         try:
             import socket
             from logging_loki import LokiHandler  # type: ignore[import-not-found]
@@ -52,8 +49,6 @@ def configure_logging(
             if "job" not in labels:
                 labels["job"] = "lang-agent"
 
-            print(f"[LOGGING INIT] Creating LokiHandler with labels: {labels}", flush=True)
-
             # Create Loki handler with immediate sending (no buffering)
             loki_handler = LokiHandler(
                 url=loki_url,
@@ -64,36 +59,33 @@ def configure_logging(
             loki_handler.setLevel(resolved_level)
             handlers.append(loki_handler)
 
-            print(f"[LOGGING INIT] LokiHandler created and added to handlers", flush=True)
-
             # Log a test message to verify Loki works
             test_logger = logging.getLogger("loki_test")
             test_logger.setLevel(resolved_level)
             test_logger.addHandler(loki_handler)
             test_logger.info("Loki handler test message - if you see this in Grafana, Loki is working!")
         except ImportError:
-            print(f"[LOGGING INIT] ERROR: python-logging-loki not installed", flush=True)
             logging.getLogger(__name__).warning(
                 "python-logging-loki is not installed. Loki logging disabled. "
                 "Install with: pip install python-logging-loki"
             )
-        except Exception as e:
-            print(f"[LOGGING INIT] ERROR: Failed to configure Loki handler: {e}", flush=True)
+        except Exception:
             logging.getLogger(__name__).exception("Failed to configure Loki handler")
 
     # Configure root logger
-    print(f"[LOGGING INIT] Configuring root logger with {len(handlers)} handlers", flush=True)
     root_logger = logging.getLogger()
     root_logger.setLevel(resolved_level)
     # Clear existing handlers and add new ones
     root_logger.handlers.clear()
     for handler in handlers:
         root_logger.addHandler(handler)
-    print(f"[LOGGING INIT] Root logger configured. Testing...", flush=True)
 
     logging.captureWarnings(True)
 
-    logger = logging.getLogger(__name__)
+    # Import get_logger after logging is configured to avoid circular dependency
+    from .logger_factory import get_logger as _get_logger
+
+    logger = _get_logger(__name__)
     logger.info(
         "Logging configured (level=%s)",
         logging.getLevelName(resolved_level),
@@ -143,4 +135,16 @@ def configure_logging(
     except Exception:
         logger.exception("Failed to install custom logger class - continuing with default")
 
-    print(f"[LOGGING INIT] configure_logging completed successfully!", flush=True)
+    # Mark logging as configured so the factory knows it's safe
+    from .logger_factory import mark_logging_configured, get_pending_loggers
+
+    mark_logging_configured()
+
+    # Log information about loggers created before configuration
+    pending = get_pending_loggers()
+    if pending:
+        logger.debug(
+            "Detected %d logger(s) created before configure_logging: %s",
+            len(pending),
+            ", ".join(pending[:5]) + ("..." if len(pending) > 5 else ""),
+        )

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Protocol, cast
@@ -11,7 +10,9 @@ from typing import Any, Iterable, Mapping, Protocol, cast
 from openai import AsyncOpenAI
 from openai.types.responses import Response, ResponseInputItemParam
 
-logger = logging.getLogger(__name__)
+from ..logger_factory import get_logger
+
+logger = get_logger(__name__)
 
 
 class LLMClient(Protocol):

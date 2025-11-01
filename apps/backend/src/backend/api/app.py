@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ..logger_factory import get_logger
 from ..logging import configure_logging
 from .dependencies import build_container, set_container
 from .routers import decks, training, telegram
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def create_api() -> FastAPI:

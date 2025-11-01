@@ -8,12 +8,8 @@ from dataclasses import dataclass
 from fastapi import Header, HTTPException, status
 
 from ..config import AppConfig
-from ..services.conversation import ConversationService
-from ..services.flashcards import FlashcardService, UserProfile
-from ..services.llm import OpenAIChatClient, OpenAIFlashcardGenerator
-from ..services.storage.database import Database
+from ..services.flashcards import UserProfile
 from ..services.telegram_auth import TelegramAuthError, parse_telegram_user
-from ..services.telegram_bot import TelegramBotRunner
 
 
 @dataclass
@@ -21,9 +17,9 @@ class APIContainer:
     """Aggregate application services shared by the HTTP API."""
 
     config: AppConfig
-    database: Database
-    flashcards: FlashcardService
-    telegram_bot: TelegramBotRunner
+    database: object  # Database - typed as object to avoid circular import
+    flashcards: object  # FlashcardService
+    telegram_bot: object  # TelegramBotRunner
 
 
 _CONTAINER: APIContainer | None = None
@@ -32,6 +28,23 @@ _CONTAINER: APIContainer | None = None
 def build_container() -> APIContainer:
     """Compose the service container for the API runtime."""
     config = AppConfig.load()
+
+    # ВАЖНО: Настроить логирование ДО импорта любых сервисов!
+    # Иначе логгеры создадутся с дефолтными настройками
+    from ..logging import configure_logging
+    configure_logging(
+        level=config.log_level,
+        loki_url=config.loki_url,
+        loki_labels=config.loki_labels,
+    )
+
+    # Import services AFTER logging is configured
+    from ..services.conversation import ConversationService
+    from ..services.flashcards import FlashcardService
+    from ..services.llm import OpenAIChatClient, OpenAIFlashcardGenerator
+    from ..services.storage.database import Database
+    from ..services.telegram_bot import TelegramBotRunner
+
     database = Database(config.database_url)
     generator = OpenAIFlashcardGenerator(
         api_key=config.openai_api_key,
@@ -59,9 +72,9 @@ def build_container() -> APIContainer:
     )
     return APIContainer(
         config=config,
-        database=database,
-        flashcards=flashcards,
-        telegram_bot=telegram_bot,
+        database=database,  # type: ignore[arg-type]
+        flashcards=flashcards,  # type: ignore[arg-type]
+        telegram_bot=telegram_bot,  # type: ignore[arg-type]
     )
 
 
@@ -78,12 +91,12 @@ def get_container() -> APIContainer:
     return _CONTAINER
 
 
-def get_flashcard_service() -> FlashcardService:
+def get_flashcard_service():  # type: ignore[no-untyped-def]
     """Dependency hook returning the flashcard service."""
     return get_container().flashcards
 
 
-def get_telegram_bot() -> TelegramBotRunner:
+def get_telegram_bot():  # type: ignore[no-untyped-def]
     """Dependency hook returning the Telegram bot runner."""
     return get_container().telegram_bot
 

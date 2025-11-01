@@ -17,15 +17,9 @@ logger = logging.getLogger(__name__)
 
 def create_api() -> FastAPI:
     """Produce the FastAPI application instance to be mounted by an ASGI server."""
+    # Logging is configured inside build_container() before importing services
     container = build_container()
     set_container(container)
-
-    # Configure logging with Loki support
-    configure_logging(
-        level=container.config.log_level,
-        loki_url=container.config.loki_url,
-        loki_labels=container.config.loki_labels,
-    )
 
     logger.info("API application starting")
 

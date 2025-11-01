@@ -33,7 +33,11 @@ class BotApp:
 def bootstrap() -> BotApp:
     """Create an application instance backed by environment configuration."""
     config = BackendAppConfig.load()
-    configure_logging(config.log_level)
+    configure_logging(
+        level=config.log_level,
+        loki_url=config.loki_url,
+        loki_labels=config.loki_labels,
+    )
     database = Database(config.database_url)
     llm_client = OpenAIChatClient(
         api_key=config.openai_api_key,

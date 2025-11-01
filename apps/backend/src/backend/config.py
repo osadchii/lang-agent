@@ -39,6 +39,8 @@ class AppConfig:
     database_url: str
     openai_system_prompt: str
     telegram_webhook_url: str | None
+    loki_url: str | None
+    loki_labels: dict[str, str]
 
     @classmethod
     def load(cls) -> "AppConfig":
@@ -55,8 +57,22 @@ class AppConfig:
         if not telegram_bot_token:
             raise RuntimeError("TELEGRAM_BOT_TOKEN is required to run the bot.")
 
+        environment = os.getenv("APP_ENV", "development")
+
+        # Build Loki labels from environment
+        loki_labels: dict[str, str] = {
+            "application": "lang-agent",
+            "environment": environment,
+        }
+        # Allow adding custom labels via LOKI_LABELS env var (comma-separated key=value pairs)
+        if custom_labels := os.getenv("LOKI_LABELS"):
+            for pair in custom_labels.split(","):
+                if "=" in pair:
+                    key, value = pair.split("=", 1)
+                    loki_labels[key.strip()] = value.strip()
+
         return cls(
-            environment=os.getenv("APP_ENV", "development"),
+            environment=environment,
             log_level=os.getenv("BOT_LOG_LEVEL", "INFO"),
             openai_api_key=openai_api_key,
             telegram_bot_token=telegram_bot_token,
@@ -64,6 +80,8 @@ class AppConfig:
             database_url=_resolve_database_url(),
             openai_system_prompt=os.getenv("OPENAI_SYSTEM_PROMPT", GREEK_TEACHER_PROMPT),
             telegram_webhook_url=os.getenv("TELEGRAM_WEBHOOK_URL"),
+            loki_url=os.getenv("LOKI_URL"),
+            loki_labels=loki_labels,
         )
 
 

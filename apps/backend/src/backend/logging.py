@@ -65,7 +65,14 @@ def configure_logging(
         except Exception:
             logging.getLogger(__name__).exception("Failed to configure Loki handler")
 
-    logging.basicConfig(level=resolved_level, handlers=handlers, force=True)
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(resolved_level)
+    # Clear existing handlers and add new ones
+    root_logger.handlers.clear()
+    for handler in handlers:
+        root_logger.addHandler(handler)
+
     logging.captureWarnings(True)
 
     logger = logging.getLogger(__name__)
@@ -78,8 +85,15 @@ def configure_logging(
     if loki_url and any(isinstance(h, type(h)) and "Loki" in type(h).__name__ for h in handlers):
         logger.info("Loki logging enabled (url=%s, labels=%s)", loki_url, loki_labels or {})
 
-    # Ensure aiogram and asyncio loggers propagate to the root handler.
-    for logger_name in ("aiogram", "asyncio"):
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(resolved_level)
-        logger.propagate = True
+    # Ensure all existing loggers propagate to the root handler
+    # This is important because loggers are created during module import
+    # before configure_logging is called
+    for name in list(logging.Logger.manager.loggerDict.keys()):
+        child_logger = logging.getLogger(name)
+        # Clear handlers from child loggers so they propagate to root
+        child_logger.handlers.clear()
+        # Ensure propagation is enabled
+        child_logger.propagate = True
+        # Set level to match root (or inherit it)
+        if child_logger.level == logging.NOTSET:
+            child_logger.setLevel(resolved_level)

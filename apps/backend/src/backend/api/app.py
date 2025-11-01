@@ -27,6 +27,8 @@ def create_api() -> FastAPI:
         loki_labels=container.config.loki_labels,
     )
 
+    logger.info("API application starting")
+
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         await container.database.initialize()

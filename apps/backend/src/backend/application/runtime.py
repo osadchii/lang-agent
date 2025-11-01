@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from ..config import AppConfig as BackendAppConfig
+
+if TYPE_CHECKING:
+    from ..services.storage.database import Database
+    from ..services.telegram_bot import TelegramBotRunner
 
 
 @dataclass
@@ -12,16 +17,16 @@ class BotApp:
     """Encapsulate bot lifecycle operations and service orchestration."""
 
     config: BackendAppConfig
-    database: object  # Database - typed as object to avoid import before logging setup
-    telegram_bot: object  # TelegramBotRunner
+    database: Database
+    telegram_bot: TelegramBotRunner
 
     async def start(self) -> None:
         """Initialize infrastructure and start polling Telegram updates."""
-        await self.database.initialize()  # type: ignore[attr-defined]
+        await self.database.initialize()
         try:
-            await self.telegram_bot.start()  # type: ignore[attr-defined]
+            await self.telegram_bot.start()
         finally:  # pragma: no branch - ensure resources close during shutdown
-            await self.database.dispose()  # type: ignore[attr-defined]
+            await self.database.dispose()
 
 
 def bootstrap() -> BotApp:
@@ -71,6 +76,6 @@ def bootstrap() -> BotApp:
 
     return BotApp(
         config=config,
-        database=database,  # type: ignore[arg-type]
-        telegram_bot=telegram_bot,  # type: ignore[arg-type]
+        database=database,
+        telegram_bot=telegram_bot,
     )

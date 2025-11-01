@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from fastapi import Header, HTTPException, status
 
@@ -11,15 +12,20 @@ from ..config import AppConfig
 from ..services.flashcards import UserProfile
 from ..services.telegram_auth import TelegramAuthError, parse_telegram_user
 
+if TYPE_CHECKING:
+    from ..services.flashcards import FlashcardService
+    from ..services.storage.database import Database
+    from ..services.telegram_bot import TelegramBotRunner
+
 
 @dataclass
 class APIContainer:
     """Aggregate application services shared by the HTTP API."""
 
     config: AppConfig
-    database: object  # Database - typed as object to avoid circular import
-    flashcards: object  # FlashcardService
-    telegram_bot: object  # TelegramBotRunner
+    database: Database
+    flashcards: FlashcardService
+    telegram_bot: TelegramBotRunner
 
 
 _CONTAINER: APIContainer | None = None
@@ -72,9 +78,9 @@ def build_container() -> APIContainer:
     )
     return APIContainer(
         config=config,
-        database=database,  # type: ignore[arg-type]
-        flashcards=flashcards,  # type: ignore[arg-type]
-        telegram_bot=telegram_bot,  # type: ignore[arg-type]
+        database=database,
+        flashcards=flashcards,
+        telegram_bot=telegram_bot,
     )
 
 

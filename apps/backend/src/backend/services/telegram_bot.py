@@ -251,6 +251,10 @@ class TelegramBotRunner:
 
     async def _handle_text_message(self, message: Message) -> None:
         """Process inbound text messages."""
+        # Force debug output to trace execution
+        import sys
+        print(f"[BOT DEBUG] _handle_text_message called!", file=sys.stderr, flush=True)
+
         start_time = time.perf_counter()
         user = message.from_user
         if user is None:
@@ -258,6 +262,16 @@ class TelegramBotRunner:
             return
 
         message_text = message.text or ""
+
+        # Log through root logger as well
+        root_logger = logging.getLogger()
+        root_logger.info(
+            "[ROOT] Bot message received: user_id=%d, username=%s, message_length=%d",
+            user.id,
+            user.username or "unknown",
+            len(message_text),
+        )
+
         logger.info(
             "Bot message received: user_id=%d, username=%s, message_length=%d",
             user.id,

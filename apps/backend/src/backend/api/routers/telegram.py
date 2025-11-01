@@ -22,13 +22,28 @@ async def telegram_webhook(
     telegram_bot: TelegramBotRunner = Depends(get_telegram_bot),
 ) -> Response:
     """Handle incoming webhook updates from Telegram."""
-    # Test if logger works at all
-    print(f"[WEBHOOK DEBUG] Webhook called! Logger name: {logger.name}, Level: {logger.level}, Handlers: {len(logger.handlers)}")
+    # Force logging through root logger to debug configuration issues
+    import sys
+    print(f"[WEBHOOK DEBUG] Webhook called!", file=sys.stderr, flush=True)
+
+    # Log through multiple loggers to test which one works
+    root_logger = logging.getLogger()
+    root_logger.info("[ROOT] Webhook received: update_id=%s", update_data.get("update_id"))
 
     logger.info(
         "Webhook received: update_id=%s, has_message=%s",
         update_data.get("update_id"),
         "message" in update_data,
+    )
+
+    # Also log logger configuration for debugging
+    logger.info(
+        "Logger config: name=%s, level=%s, propagate=%s, handlers=%s, parent=%s",
+        logger.name,
+        logging.getLevelName(logger.level),
+        logger.propagate,
+        [type(h).__name__ for h in logger.handlers],
+        logger.parent.name if logger.parent else None,
     )
 
     try:

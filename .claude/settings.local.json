@@ -1,13 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)",
-      "Bash(python -m pytest:*)",
-      "Bash(npm run dev:*)",
-      "Bash(python -m mypy:*)",
-      "Bash(python -m pyright:*)",
-      "mcp__ide__getDiagnostics",
-      "Bash(pip install:*)"
+      "Bash(Select-Object Id, ProcessName, CommandLine -First 20)"
     ],
     "deny": [],
     "ask": []

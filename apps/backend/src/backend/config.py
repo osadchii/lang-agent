@@ -78,7 +78,7 @@ class AppConfig:
             telegram_bot_token=telegram_bot_token,
             openai_model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
             database_url=_resolve_database_url(),
-            openai_system_prompt=os.getenv("OPENAI_SYSTEM_PROMPT", GREEK_TEACHER_PROMPT),
+            openai_system_prompt=GREEK_TEACHER_PROMPT,
             telegram_webhook_url=os.getenv("TELEGRAM_WEBHOOK_URL"),
             loki_url=os.getenv("LOKI_URL"),
             loki_labels=loki_labels,

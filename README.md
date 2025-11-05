@@ -49,7 +49,7 @@ docs/adr/         Architectural decision records
 5. Copy `.env.example` to `.env` and populate required backend secrets.
    - Required: `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`.
    - Database defaults (override as needed): `DB_DRIVER`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`. You can still set `DATABASE_URL` directly to bypass composition.
-   - Optional overrides: `OPENAI_MODEL`, `OPENAI_SYSTEM_PROMPT`.
+   - Optional override: `OPENAI_MODEL`.
    - The backend auto-loads `.env` via `python-dotenv`; no manual sourcing needed.
 6. Apply database migrations: `python -m backend.cli migrate`.
 

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
+from contextlib import suppress
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.enums import ChatAction
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, ErrorEvent, Message, Update, User
@@ -285,6 +288,13 @@ class TelegramBotRunner:
             text=message_text,
         )
 
+        chat = message.chat
+        chat_id = chat.id if chat else None
+        typing_task = None
+
+        if chat_id is not None:
+            typing_task = asyncio.create_task(self._typing_indicator(chat_id))
+
         try:
             reply = await self._conversation.handle_user_message(payload)
             elapsed_ms = (time.perf_counter() - start_time) * 1000
@@ -304,8 +314,29 @@ class TelegramBotRunner:
             )
             await self._safe_reply(message, "Произошла ошибка. Попробуйте ещё раз позже.")
             raise
+        finally:
+            if typing_task is not None:
+                typing_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await typing_task
 
         await self._safe_reply(message, reply)
+
+    async def _typing_indicator(self, chat_id: int) -> None:
+        """Periodically send 'typing' chat actions while awaiting a response."""
+        try:
+            while True:
+                try:
+                    await self._bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+                except TelegramBadRequest:
+                    logger.debug("Failed to send typing action for chat_id=%s", chat_id)
+                    return
+                except Exception:  # pragma: no cover - defensive logging
+                    logger.exception("Unexpected error while sending typing action for chat_id=%s", chat_id)
+                    return
+                await asyncio.sleep(4)
+        except asyncio.CancelledError:
+            return
 
     async def _safe_reply(self, message: Message, text: str, reply_markup=None) -> None:
         """Send a reply while guarding against Telegram API errors."""

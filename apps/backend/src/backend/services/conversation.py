@@ -76,24 +76,11 @@ def _format_reply_to_html(raw_text: str) -> str:
 
     converted_text = "\n".join(list_converted)
 
-    # Split into paragraphs, preserving block elements.
-    blocks: list[str] = []
-    for segment in re.split(r"\n{2,}", converted_text):
-        segment = segment.strip()
-        if not segment:
-            continue
-        if segment.startswith(("<ul>", "[[CODE_BLOCK_", "<pre>", "<h", "<blockquote")):
-            blocks.append(segment)
-            continue
-        blocks.append(f"<p>{segment.replace(chr(10), '<br/>')}</p>")
-
-    formatted = "\n".join(blocks)
-
     # Restore code block placeholders.
     for index, snippet in enumerate(code_block_snippets):
-        formatted = formatted.replace(f"[[CODE_BLOCK_{index}]]", snippet)
+        converted_text = converted_text.replace(f"[[CODE_BLOCK_{index}]]", snippet)
 
-    return formatted
+    return converted_text.strip()
 
 
 @dataclass

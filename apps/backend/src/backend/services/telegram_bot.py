@@ -8,7 +8,7 @@ import time
 from contextlib import suppress
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.enums import ChatAction
+from aiogram.enums import ChatAction, ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, ErrorEvent, Message, Update, User
@@ -341,8 +341,18 @@ class TelegramBotRunner:
     async def _safe_reply(self, message: Message, text: str, reply_markup=None) -> None:
         """Send a reply while guarding against Telegram API errors."""
         try:
-            await message.answer(text, reply_markup=reply_markup)
-        except TelegramBadRequest:
+            await message.answer(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+        except TelegramBadRequest as exc:
+            error_text = str(exc).lower()
+            if "parse entities" in error_text or "can't parse" in error_text:
+                logger.warning(
+                    "HTML formatting failed for message %s, retrying without parse mode",
+                    message.message_id,
+                    exc_info=exc,
+                )
+                with suppress(TelegramBadRequest):
+                    await message.answer(text, reply_markup=reply_markup)
+                return
             logger.exception("Failed to send reply for message %s", message.message_id)
         except Exception:  # pragma: no cover - unexpected transport errors
             logger.exception("Unexpected error while replying to message %s", message.message_id)
@@ -357,8 +367,18 @@ class TelegramBotRunner:
         if not isinstance(msg, Message):
             return
         try:
-            await msg.edit_text(text, reply_markup=reply_markup)
-        except TelegramBadRequest:
+            await msg.edit_text(text, reply_markup=reply_markup, parse_mode=ParseMode.HTML)
+        except TelegramBadRequest as exc:
+            error_text = str(exc).lower()
+            if "parse entities" in error_text or "can't parse" in error_text:
+                logger.warning(
+                    "HTML formatting failed while editing message %s, retrying without parse mode",
+                    callback.id,
+                    exc_info=exc,
+                )
+                with suppress(TelegramBadRequest):
+                    await msg.edit_text(text, reply_markup=reply_markup)
+                return
             logger.exception("Failed to edit reply for callback %s", callback.id)
         except Exception:  # pragma: no cover - defensive branch
             logger.exception("Unexpected error while editing message %s", callback.id)

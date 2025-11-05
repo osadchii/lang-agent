@@ -10,6 +10,11 @@ DEFAULT_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 # Global storage for handlers configured by configure_logging()
 _configured_handlers: list[logging.Handler] = []
 _logging_level: int = logging.INFO
+# Override noisy third-party loggers (match exact name or dotted prefix)
+_LOGGER_LEVEL_OVERRIDES: dict[str, int] = {
+    "sqlalchemy.engine": logging.WARNING,
+    "sqlalchemy.pool": logging.WARNING,
+}
 
 
 def configure_logger(logger: logging.Logger) -> None:
@@ -37,8 +42,15 @@ def configure_logger(logger: logging.Logger) -> None:
     for handler in _configured_handlers:
         logger.addHandler(handler)
 
-    # Set logger level
-    logger.setLevel(_logging_level)
+    # Apply per-logger level overrides when configured
+    level_override: int | None = None
+    for name, override in _LOGGER_LEVEL_OVERRIDES.items():
+        if logger.name == name or logger.name.startswith(f"{name}."):
+            level_override = override
+            break
+
+    # Set logger level (override noisy defaults such as sqlalchemy.engine)
+    logger.setLevel(level_override if level_override is not None else _logging_level)
 
     # Disable propagation since we're attaching handlers directly
     # This prevents duplicate logs

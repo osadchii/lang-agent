@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import html
+import re
 from dataclasses import dataclass
 from typing import Mapping, Sequence
 
@@ -9,6 +11,89 @@ from .llm import LLMClient
 from .storage.database import Database
 from .storage.models import MessageDirection
 from .storage.repositories import MessageRepository, UserRepository
+
+_MARKDOWN_CODE_BLOCK_RE = re.compile(r"```(\w+)?\n([\s\S]*?)```", re.MULTILINE)
+_MARKDOWN_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_MARKDOWN_STRONG_RE = re.compile(r"__(.+?)__")
+_MARKDOWN_ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
+_MARKDOWN_EM_RE = re.compile(r"_(.+?)_")
+_MARKDOWN_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+
+
+def _format_reply_to_html(raw_text: str) -> str:
+    """Convert lightweight Markdown-style formatting into Telegram-friendly HTML."""
+    stripped = raw_text.strip()
+    if not stripped:
+        return stripped
+
+    # If the model already returned HTML, pass it through unchanged.
+    if re.search(r"<[a-zA-Z/][^>]*>", stripped):
+        return stripped
+
+    code_block_snippets: list[str] = []
+
+    def _store_code_block(match: re.Match[str]) -> str:
+        code_content = match.group(2) or ""
+        code_block_snippets.append(f"<pre><code>{html.escape(code_content.strip())}</code></pre>")
+        return f"[[CODE_BLOCK_{len(code_block_snippets) - 1}]]"
+
+    # Replace triple-backtick blocks with placeholders to preserve them during escaping.
+    without_code_blocks = _MARKDOWN_CODE_BLOCK_RE.sub(_store_code_block, stripped)
+
+    # Escape all remaining characters to prevent accidental HTML injection.
+    escaped = html.escape(without_code_blocks)
+
+    # Convert inline code segments.
+    escaped = _MARKDOWN_INLINE_CODE_RE.sub(lambda m: f"<code>{m.group(1)}</code>", escaped)
+
+    # Convert bold/strong markers.
+    escaped = _MARKDOWN_BOLD_RE.sub(lambda m: f"<b>{m.group(1)}</b>", escaped)
+    escaped = _MARKDOWN_STRONG_RE.sub(lambda m: f"<b>{m.group(1)}</b>", escaped)
+
+    # Convert italics/emphasis markers (single * or _ not part of bold).
+    escaped = _MARKDOWN_ITALIC_RE.sub(lambda m: f"<i>{m.group(1)}</i>", escaped)
+    escaped = _MARKDOWN_EM_RE.sub(lambda m: f"<i>{m.group(1)}</i>", escaped)
+
+    # Handle bullet lists.
+    lines = escaped.splitlines()
+    in_list = False
+    list_converted: list[str] = []
+    for line in lines:
+        stripped_line = line.strip()
+        if stripped_line.startswith("- "):
+            if not in_list:
+                list_converted.append("<ul>")
+                in_list = True
+            item_text = stripped_line[2:].strip()
+            list_converted.append(f"<li>{item_text}</li>")
+        else:
+            if in_list:
+                list_converted.append("</ul>")
+                in_list = False
+            list_converted.append(line)
+    if in_list:
+        list_converted.append("</ul>")
+
+    converted_text = "\n".join(list_converted)
+
+    # Split into paragraphs, preserving block elements.
+    blocks: list[str] = []
+    for segment in re.split(r"\n{2,}", converted_text):
+        segment = segment.strip()
+        if not segment:
+            continue
+        if segment.startswith(("<ul>", "[[CODE_BLOCK_", "<pre>", "<h", "<blockquote")):
+            blocks.append(segment)
+            continue
+        blocks.append(f"<p>{segment.replace(chr(10), '<br/>')}</p>")
+
+    formatted = "\n".join(blocks)
+
+    # Restore code block placeholders.
+    for index, snippet in enumerate(code_block_snippets):
+        formatted = formatted.replace(f"[[CODE_BLOCK_{index}]]", snippet)
+
+    return formatted
 
 
 @dataclass
@@ -74,6 +159,7 @@ class ConversationService:
             )
 
             reply = await self._llm_client.generate_reply(user_message=payload.text, history=history)
+            formatted_reply = _format_reply_to_html(reply)
 
             await self._messages.log_message(
                 session,
@@ -85,4 +171,4 @@ class ConversationService:
 
             await session.commit()
 
-        return reply
+        return formatted_reply

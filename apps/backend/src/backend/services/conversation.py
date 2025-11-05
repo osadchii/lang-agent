@@ -18,6 +18,25 @@ _MARKDOWN_STRONG_RE = re.compile(r"__(.+?)__")
 _MARKDOWN_ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 _MARKDOWN_EM_RE = re.compile(r"_(.+?)_")
 _MARKDOWN_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+_HTML_TAG_RE = re.compile(r"</?([a-zA-Z0-9]+)(?:\s[^>]*)?>")
+_ALLOWED_HTML_TAGS = {
+    "a",
+    "b",
+    "strong",
+    "i",
+    "em",
+    "u",
+    "ins",
+    "s",
+    "strike",
+    "del",
+    "code",
+    "pre",
+    "br",
+    "blockquote",
+    "tg-spoiler",
+    "span",
+}
 
 
 def _format_reply_to_html(raw_text: str) -> str:
@@ -26,9 +45,17 @@ def _format_reply_to_html(raw_text: str) -> str:
     if not stripped:
         return stripped
 
-    # If the model already returned HTML, pass it through unchanged.
-    if re.search(r"<[a-zA-Z/][^>]*>", stripped):
+    # If the model already returned only allowed HTML tags, keep it untouched.
+    tag_names = {match.group(1).lower() for match in _HTML_TAG_RE.finditer(stripped)}
+    if tag_names and tag_names.issubset(_ALLOWED_HTML_TAGS):
         return stripped
+
+    # Remove disallowed HTML tags while preserving the enclosed content.
+    def _drop_disallowed_tags(match: re.Match[str]) -> str:
+        tag = match.group(1).lower()
+        return match.group(0) if tag in _ALLOWED_HTML_TAGS else ""
+
+    sanitized_source = _HTML_TAG_RE.sub(_drop_disallowed_tags, stripped)
 
     code_block_snippets: list[str] = []
 
@@ -37,46 +64,31 @@ def _format_reply_to_html(raw_text: str) -> str:
         code_block_snippets.append(f"<pre><code>{html.escape(code_content.strip())}</code></pre>")
         return f"[[CODE_BLOCK_{len(code_block_snippets) - 1}]]"
 
-    # Replace triple-backtick blocks with placeholders to preserve them during escaping.
-    without_code_blocks = _MARKDOWN_CODE_BLOCK_RE.sub(_store_code_block, stripped)
+    without_code_blocks = _MARKDOWN_CODE_BLOCK_RE.sub(_store_code_block, sanitized_source)
 
-    # Escape all remaining characters to prevent accidental HTML injection.
     escaped = html.escape(without_code_blocks)
 
-    # Convert inline code segments.
     escaped = _MARKDOWN_INLINE_CODE_RE.sub(lambda m: f"<code>{m.group(1)}</code>", escaped)
-
-    # Convert bold/strong markers.
     escaped = _MARKDOWN_BOLD_RE.sub(lambda m: f"<b>{m.group(1)}</b>", escaped)
     escaped = _MARKDOWN_STRONG_RE.sub(lambda m: f"<b>{m.group(1)}</b>", escaped)
-
-    # Convert italics/emphasis markers (single * or _ not part of bold).
     escaped = _MARKDOWN_ITALIC_RE.sub(lambda m: f"<i>{m.group(1)}</i>", escaped)
     escaped = _MARKDOWN_EM_RE.sub(lambda m: f"<i>{m.group(1)}</i>", escaped)
 
-    # Handle bullet lists.
     lines = escaped.splitlines()
-    in_list = False
-    list_converted: list[str] = []
+    formatted_lines: list[str] = []
     for line in lines:
-        stripped_line = line.strip()
-        if stripped_line.startswith("- "):
-            if not in_list:
-                list_converted.append("<ul>")
-                in_list = True
-            item_text = stripped_line[2:].strip()
-            list_converted.append(f"<li>{item_text}</li>")
+        stripped_line = line.lstrip()
+        if stripped_line.startswith(("- ", "* ")):
+            if formatted_lines and formatted_lines[-1].strip() and not formatted_lines[-1].lstrip().startswith("•"):
+                formatted_lines.append("")
+            bullet_text = stripped_line[2:].strip()
+            formatted_lines.append(f"• {bullet_text}")
         else:
-            if in_list:
-                list_converted.append("</ul>")
-                in_list = False
-            list_converted.append(line)
-    if in_list:
-        list_converted.append("</ul>")
+            formatted_lines.append(line)
 
-    converted_text = "\n".join(list_converted)
+    converted_text = "\n".join(formatted_lines)
+    converted_text = re.sub(r"\n{3,}", "\n\n", converted_text)
 
-    # Restore code block placeholders.
     for index, snippet in enumerate(code_block_snippets):
         converted_text = converted_text.replace(f"[[CODE_BLOCK_{index}]]", snippet)
 

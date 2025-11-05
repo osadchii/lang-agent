@@ -1,11 +1,19 @@
 .PHONY: backend-install backend-dev backend-api backend-test stack-db stack-docker frontend-install frontend-dev frontend-build
 
+PYTHON := $(shell command -v python3 2>/dev/null)
+ifeq ($(PYTHON),)
+PYTHON := $(shell command -v python 2>/dev/null)
+endif
+ifeq ($(PYTHON),)
+$(error Python interpreter not found. Install python3 or python before running make targets.)
+endif
+
 backend-install:
-	pip install -e .
-	pip install -r requirements-dev.txt
+	$(PYTHON) -m pip install -e .
+	$(PYTHON) -m pip install -r requirements-dev.txt
 
 backend-dev:
-	python -m backend.cli
+	$(PYTHON) -m backend.cli
 
 backend-api:
 	uvicorn backend.api.app:create_api --factory --reload

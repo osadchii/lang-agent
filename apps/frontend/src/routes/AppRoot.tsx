@@ -12,7 +12,14 @@ export function App(): JSX.Element {
 
   return (
     <div className={styles.appShell}>
-      <main className={styles.main}>{activeSection === "training" ? <TrainingPanel /> : <DecksPanel />}</main>
+      <main className={styles.main}>
+        <div className={`${styles.panel} ${activeSection === "training" ? styles.panelActive : styles.panelInactive}`}>
+          <TrainingPanel />
+        </div>
+        <div className={`${styles.panel} ${activeSection === "decks" ? styles.panelActive : styles.panelInactive}`}>
+          <DecksPanel />
+        </div>
+      </main>
 
       <footer className={styles.footer}>
         <nav className={styles.navigation} aria-label="Основные разделы">

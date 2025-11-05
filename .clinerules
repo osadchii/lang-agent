@@ -22,6 +22,7 @@
 
 ## Tooling And Quality
 - Favor automated formatting, linting, and static analysis across all languages used in the project; treat warnings as build failures.
+- Use the Context7 MCP documentation tools (`resolve-library-id`, then `get-library-docs`) to pull external dependency documentation instead of ad-hoc web browsing.
 - Develop comprehensive automated tests for every utility, service, and module; aim for meaningful coverage rather than percentage targets.
 - Write unit and integration tests alongside new code; keep suites fast, deterministic, and execute them after every code change and before each commit.
 - Mock or stub external integrations in tests whenever feasible to maintain reliability, speed, and isolation.

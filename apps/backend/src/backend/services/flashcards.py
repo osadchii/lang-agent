@@ -121,8 +121,12 @@ class FlashcardService:
         self,
         profile: UserProfile,
         words: Sequence[str],
+        deck_id: int | None = None,
     ) -> list[FlashcardCreationResult]:
-        """Create or reuse flashcards for the supplied words and link them to the user."""
+        """Create or reuse flashcards for the supplied words and link them to the user.
+
+        If deck_id is None, uses the user's active deck or creates a default deck.
+        """
         cleaned_words = [word.strip() for word in words if word and word.strip()]
         if not cleaned_words:
             return [
@@ -147,7 +151,25 @@ class FlashcardService:
                 first_name=profile.first_name,
                 last_name=profile.last_name,
             )
-            deck = await self._flashcards.ensure_deck(session, owner_id=user.id)
+
+            # Determine which deck to use
+            if deck_id is None:
+                # Use active deck if set, otherwise ensure default deck
+                active_deck_id = user.active_deck_id
+                if active_deck_id is not None:
+                    deck = await self._flashcards.get_deck(session, owner_id=user.id, deck_id=active_deck_id)
+                    if deck is None:
+                        # Active deck was deleted, clear it and create default
+                        user.active_deck_id = None
+                        deck = await self._flashcards.ensure_deck(session, owner_id=user.id)
+                        user.active_deck_id = deck.id
+                else:
+                    deck = await self._flashcards.ensure_deck(session, owner_id=user.id)
+                    user.active_deck_id = deck.id
+            else:
+                deck = await self._flashcards.get_deck(session, owner_id=user.id, deck_id=deck_id)
+                if deck is None:
+                    raise ValueError("Колода не найдена.")
 
             for word in cleaned_words:
                 normalized = self._flashcards.normalize_text(word)
@@ -216,8 +238,18 @@ class FlashcardService:
             await session.commit()
 
     async def get_next_card(self, *, user_id: int, deck_id: int | None = None) -> StudyCard | None:
-        """Return the next due card for the user, if any."""
+        """Return the next due card for the user, if any.
+
+        If deck_id is None, uses the user's active deck. If no active deck is set,
+        returns cards from any deck.
+        """
         async with self._database.session() as session:
+            # If deck_id is not specified, try to use active deck
+            if deck_id is None:
+                active_deck_id = await self._users.get_active_deck_id(session, user_id=user_id)
+                if active_deck_id is not None:
+                    deck_id = active_deck_id
+
             record = await self._flashcards.fetch_next_due_card(session, user_id=user_id, deck_id=deck_id)
             if record is None:
                 return None
@@ -567,6 +599,49 @@ class FlashcardService:
             first_name=profile.first_name,
             last_name=profile.last_name,
         )
+
+    async def set_active_deck(
+        self,
+        profile: UserProfile,
+        *,
+        deck_id: int,
+    ) -> None:
+        """Set the active deck for a user."""
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            # Verify the deck exists and belongs to the user
+            deck = await self._flashcards.get_deck(session, owner_id=user.id, deck_id=deck_id)
+            if deck is None:
+                raise ValueError("Колода не найдена.")
+            await self._users.set_active_deck(session, user_id=user.id, deck_id=deck_id)
+            await session.commit()
+
+    async def get_active_deck(self, profile: UserProfile) -> DeckSummary | None:
+        """Get the active deck for a user."""
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            if user.active_deck_id is None:
+                return None
+            deck = await self._flashcards.get_deck(session, owner_id=user.id, deck_id=user.active_deck_id)
+            if deck is None:
+                # Active deck was deleted, clear it
+                user.active_deck_id = None
+                await session.commit()
+                return None
+            # Get deck stats
+            rows = await self._flashcards.list_decks(session, owner_id=user.id)
+            for deck_row, card_count, due_count in rows:
+                if deck_row.id == deck.id:
+                    return DeckSummary(
+                        deck_id=deck_row.id,
+                        slug=deck_row.slug,
+                        name=deck_row.name,
+                        description=deck_row.description,
+                        card_count=card_count,
+                        due_count=due_count,
+                        created_at=deck_row.created_at,
+                    )
+            return None
 
     async def _require_deck(
         self,

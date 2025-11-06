@@ -40,11 +40,13 @@ class UserRecord(Base):
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    active_deck_id: Mapped[int | None] = mapped_column(ForeignKey("decks.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc))
 
     messages: Mapped[list["MessageRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     owned_decks: Mapped[list["DeckRecord"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
     flashcards: Mapped[list["UserCardRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    active_deck: Mapped["DeckRecord | None"] = relationship(foreign_keys=[active_deck_id])
 
 
 class MessageRecord(Base):

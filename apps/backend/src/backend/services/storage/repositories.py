@@ -52,6 +52,42 @@ class UserRepository:
         await session.flush()
         return record
 
+    async def get_user(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+    ) -> UserRecord | None:
+        """Fetch a user by ID."""
+        return await session.get(UserRecord, user_id)
+
+    async def set_active_deck(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+        deck_id: int | None,
+    ) -> UserRecord:
+        """Set the active deck for a user."""
+        record = await session.get(UserRecord, user_id)
+        if record is None:
+            raise ValueError("Пользователь не найден.")
+        record.active_deck_id = deck_id
+        await session.flush()
+        return record
+
+    async def get_active_deck_id(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+    ) -> int | None:
+        """Get the active deck ID for a user."""
+        record = await session.get(UserRecord, user_id)
+        if record is None:
+            return None
+        return record.active_deck_id
+
 
 class MessageRepository:
     """Store inbound and outbound message logs."""

@@ -4,7 +4,10 @@
       "Bash(Select-Object Id, ProcessName, CommandLine -First 20)",
       "Bash(python test_logging.py:*)",
       "Bash(timeout 5 python:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(poetry run alembic:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

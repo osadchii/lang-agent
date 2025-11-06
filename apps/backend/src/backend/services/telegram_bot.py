@@ -43,6 +43,10 @@ class TelegramBotRunner:
 
         self._dispatcher.message.register(self._handle_add_command, Command("add"))
         self._dispatcher.message.register(self._handle_flashcard_command, Command("flashcard"))
+        self._dispatcher.message.register(self._handle_create_deck_command, Command("create_deck"))
+        self._dispatcher.message.register(self._handle_list_decks_command, Command("list_decks"))
+        self._dispatcher.message.register(self._handle_select_deck_command, Command("select_deck"))
+        self._dispatcher.message.register(self._handle_delete_deck_command, Command("delete_deck"))
         self._dispatcher.message.register(self._handle_text_message, F.text)
         self._dispatcher.callback_query.register(self._handle_flashcard_callback, F.data.startswith(_FLASHCARD_CALLBACK_PREFIX))
         self._dispatcher.errors.register(self._handle_error)
@@ -262,6 +266,154 @@ class TelegramBotRunner:
         text = f"{self._render_full_card(study_card)}\n\nОтметка: {phrases[rating]}"
         await self._safe_edit(callback, text, reply_markup=None)
         await callback.answer("Ответ сохранён.")
+
+    async def _handle_create_deck_command(self, message: Message) -> None:
+        """Process the /create_deck command for creating a new deck."""
+        user = message.from_user
+        if user is None:
+            logger.debug("Skipping /create_deck without sender: %s", message.message_id)
+            return
+
+        profile = self._to_profile(user)
+        text = message.text or ""
+        parts = text.split(maxsplit=1)
+
+        if len(parts) < 2 or not parts[1].strip():
+            await self._safe_reply(
+                message,
+                "Добавьте название колоды после команды, например: /create_deck Греческий для путешествий",
+            )
+            return
+
+        deck_name = parts[1].strip()
+        logger.info("Bot /create_deck command: user_id=%d, deck_name=%s", user.id, deck_name)
+
+        try:
+            deck = await self._flashcards.create_deck(profile, name=deck_name)
+            # Automatically set as active deck
+            await self._flashcards.set_active_deck(profile, deck_id=deck.deck_id)
+            await self._safe_reply(
+                message,
+                f"Колода «{deck.name}» успешно создана и установлена как активная.",
+            )
+        except Exception:
+            logger.exception("Bot /create_deck failed: user_id=%d", user.id)
+            await self._safe_reply(message, "Не удалось создать колоду. Попробуйте позже.")
+
+    async def _handle_list_decks_command(self, message: Message) -> None:
+        """Process the /list_decks command to show all user decks."""
+        user = message.from_user
+        if user is None:
+            logger.debug("Skipping /list_decks without sender: %s", message.message_id)
+            return
+
+        profile = self._to_profile(user)
+        logger.info("Bot /list_decks command: user_id=%d", user.id)
+
+        try:
+            decks = await self._flashcards.list_user_decks(profile)
+            active_deck = await self._flashcards.get_active_deck(profile)
+
+            if not decks:
+                await self._safe_reply(message, "У вас пока нет колод. Создайте колоду с помощью /create_deck.")
+                return
+
+            lines = ["Ваши колоды:\n"]
+            for deck in decks:
+                active_marker = " ✓ (активная)" if active_deck and deck.deck_id == active_deck.deck_id else ""
+                lines.append(
+                    f"• ID: {deck.deck_id} | <b>{deck.name}</b>{active_marker}\n"
+                    f"  Карточек: {deck.card_count} | К повторению: {deck.due_count}"
+                )
+
+            lines.append(
+                "\n\nДля выбора активной колоды используйте:\n/select_deck [ID]\n\n"
+                "Для удаления колоды используйте:\n/delete_deck [ID]"
+            )
+            await self._safe_reply(message, "\n".join(lines))
+        except Exception:
+            logger.exception("Bot /list_decks failed: user_id=%d", user.id)
+            await self._safe_reply(message, "Не удалось получить список колод. Попробуйте позже.")
+
+    async def _handle_select_deck_command(self, message: Message) -> None:
+        """Process the /select_deck command to set active deck."""
+        user = message.from_user
+        if user is None:
+            logger.debug("Skipping /select_deck without sender: %s", message.message_id)
+            return
+
+        profile = self._to_profile(user)
+        text = message.text or ""
+        parts = text.split()
+
+        if len(parts) < 2:
+            await self._safe_reply(
+                message,
+                "Укажите ID колоды после команды, например: /select_deck 1\n\n"
+                "Посмотреть список колод: /list_decks",
+            )
+            return
+
+        try:
+            deck_id = int(parts[1])
+        except ValueError:
+            await self._safe_reply(message, "ID колоды должен быть числом.")
+            return
+
+        logger.info("Bot /select_deck command: user_id=%d, deck_id=%d", user.id, deck_id)
+
+        try:
+            await self._flashcards.set_active_deck(profile, deck_id=deck_id)
+            deck = await self._flashcards.get_active_deck(profile)
+            if deck:
+                await self._safe_reply(
+                    message,
+                    f"Колода «{deck.name}» установлена как активная.\n"
+                    f"Карточек: {deck.card_count} | К повторению: {deck.due_count}",
+                )
+            else:
+                await self._safe_reply(message, "Колода установлена как активная.")
+        except ValueError as exc:
+            await self._safe_reply(message, str(exc))
+        except Exception:
+            logger.exception("Bot /select_deck failed: user_id=%d", user.id)
+            await self._safe_reply(message, "Не удалось выбрать колоду. Попробуйте позже.")
+
+    async def _handle_delete_deck_command(self, message: Message) -> None:
+        """Process the /delete_deck command to remove a deck."""
+        user = message.from_user
+        if user is None:
+            logger.debug("Skipping /delete_deck without sender: %s", message.message_id)
+            return
+
+        profile = self._to_profile(user)
+        text = message.text or ""
+        parts = text.split()
+
+        if len(parts) < 2:
+            await self._safe_reply(
+                message,
+                "Укажите ID колоды после команды, например: /delete_deck 1\n\n"
+                "Посмотреть список колод: /list_decks",
+            )
+            return
+
+        try:
+            deck_id = int(parts[1])
+        except ValueError:
+            await self._safe_reply(message, "ID колоды должен быть числом.")
+            return
+
+        logger.info("Bot /delete_deck command: user_id=%d, deck_id=%d", user.id, deck_id)
+
+        try:
+            await self._flashcards.delete_deck(profile, deck_id=deck_id)
+            await self._safe_reply(message, "Колода успешно удалена.")
+        except ValueError as exc:
+            await self._safe_reply(message, str(exc))
+        except Exception:
+            logger.exception("Bot /delete_deck failed: user_id=%d", user.id)
+            await self._safe_reply(message, "Не удалось удалить колоду. Попробуйте позже.")
 
     async def _handle_text_message(self, message: Message) -> None:
         """Process inbound text messages."""

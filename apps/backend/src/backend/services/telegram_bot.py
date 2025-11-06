@@ -40,7 +40,6 @@ class TelegramBotRunner:
         self._conversation = conversation
         self._flashcards = flashcards
         self._token = token
-        self._loggers_reconfigured = False  # Track if we've reconfigured aiogram loggers
 
         self._dispatcher.message.register(self._handle_add_command, Command("add"))
         self._dispatcher.message.register(self._handle_translate_command, Command("translate"))
@@ -76,16 +75,7 @@ class TelegramBotRunner:
 
     async def process_update(self, update: Update) -> None:
         """Process a single update from Telegram webhook."""
-        # Log BEFORE reconfiguration to test if logging works at all
         logger.info("Processing Telegram update: update_id=%s", update.update_id)
-
-        # Reconfigure all loggers on first update to ensure aiogram loggers work
-        if not self._loggers_reconfigured:
-            from ..logger_factory import reconfigure_all_loggers
-            reconfigure_all_loggers()
-            self._loggers_reconfigured = True
-            logger.info("Reconfigured all loggers (including aiogram) for proper propagation")
-
         await self._dispatcher.feed_update(bot=self._bot, update=update)
 
     async def _handle_add_command(self, message: Message) -> None:

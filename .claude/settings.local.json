@@ -18,7 +18,11 @@
       "Bash(../../.venv/bin/python -m pytest:*)",
       "Bash(../../.venv/bin/python:*)",
       "WebFetch(domain:core.telegram.org)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git log:*)",
+      "Bash(timeout 5 ../../.venv/bin/python:*)",
+      "Bash(timeout 5 .venv/bin/python:*)",
+      "Bash(timeout 3 .venv/bin/python:*)"
     ],
     "deny": [],
     "ask": []

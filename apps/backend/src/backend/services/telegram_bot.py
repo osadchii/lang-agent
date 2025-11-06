@@ -16,11 +16,12 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from ..logger_factory import get_logger
 from .conversation import ConversationService, UserMessagePayload
-from .flashcards import FlashcardCreationResult, FlashcardService, ReviewRating, StudyCard, UserProfile
+from .flashcards import FlashcardCreationResult, FlashcardService, ReviewRating, StudyCard, TranslationResult, UserProfile
 
 logger = get_logger(__name__)
 
 _FLASHCARD_CALLBACK_PREFIX = "flashcard"
+_ADD_CARD_CALLBACK_PREFIX = "addcard"
 _FLASHCARD_SPLIT_PATTERN = re.compile(r"[,\n;]+")
 
 
@@ -42,6 +43,7 @@ class TelegramBotRunner:
         self._loggers_reconfigured = False  # Track if we've reconfigured aiogram loggers
 
         self._dispatcher.message.register(self._handle_add_command, Command("add"))
+        self._dispatcher.message.register(self._handle_translate_command, Command("translate"))
         self._dispatcher.message.register(self._handle_flashcard_command, Command("flashcard"))
         self._dispatcher.message.register(self._handle_create_deck_command, Command("create_deck"))
         self._dispatcher.message.register(self._handle_list_decks_command, Command("list_decks"))
@@ -49,6 +51,7 @@ class TelegramBotRunner:
         self._dispatcher.message.register(self._handle_delete_deck_command, Command("delete_deck"))
         self._dispatcher.message.register(self._handle_text_message, F.text)
         self._dispatcher.callback_query.register(self._handle_flashcard_callback, F.data.startswith(_FLASHCARD_CALLBACK_PREFIX))
+        self._dispatcher.callback_query.register(self._handle_add_card_callback, F.data.startswith(_ADD_CARD_CALLBACK_PREFIX))
         self._dispatcher.errors.register(self._handle_error)
 
     @property
@@ -131,6 +134,56 @@ class TelegramBotRunner:
 
         response = self._format_add_results(results)
         await self._safe_reply(message, response)
+
+    async def _handle_translate_command(self, message: Message) -> None:
+        """Process the /translate command for translating words without adding them."""
+        start_time = time.perf_counter()
+        user = message.from_user
+        if user is None:
+            logger.debug("Skipping /translate without sender: %s", message.message_id)
+            return
+
+        profile = self._to_profile(user)
+        text = message.text or ""
+        parts = text.split(maxsplit=1)
+
+        if len(parts) < 2:
+            await self._safe_reply(
+                message,
+                "Добавьте слово после команды, например: /translate привет",
+            )
+            return
+
+        word = parts[1].strip()
+        logger.info("Bot /translate command: user_id=%d, word=%s", user.id, word)
+
+        try:
+            result = await self._flashcards.translate_word(profile, word)
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+            logger.info(
+                "Bot /translate command processed: user_id=%d, duration_ms=%.2f",
+                user.id,
+                elapsed_ms,
+            )
+
+            # Format translation result
+            response = self._format_translation_result(result)
+
+            # Add button if word is not in user's decks
+            keyboard = None
+            if not result.already_in_decks:
+                keyboard = self._add_card_keyboard(word, result.card_content.target_text)
+
+            await self._safe_reply(message, response, reply_markup=keyboard)
+        except Exception:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "Bot /translate command failed: user_id=%d, duration_ms=%.2f",
+                user.id,
+                elapsed_ms,
+            )
+            await self._safe_reply(message, "Не удалось перевести слово. Попробуйте позже.")
 
     async def _handle_flashcard_command(self, message: Message) -> None:
         """Serve the next due flashcard to the learner."""
@@ -266,6 +319,67 @@ class TelegramBotRunner:
         text = f"{self._render_full_card(study_card)}\n\nОтметка: {phrases[rating]}"
         await self._safe_edit(callback, text, reply_markup=None)
         await callback.answer("Ответ сохранён.")
+
+    async def _handle_add_card_callback(self, callback: CallbackQuery) -> None:
+        """Handle adding a card to user's decks with LLM-based deck selection."""
+        data = callback.data or ""
+        parts = data.split(":", maxsplit=2)
+        if len(parts) < 3 or parts[0] != _ADD_CARD_CALLBACK_PREFIX:
+            await callback.answer()
+            return
+
+        word = parts[1]
+        translation = parts[2]
+        user = callback.from_user
+        if user is None:
+            await callback.answer()
+            return
+
+        profile = self._to_profile(user)
+        logger.info("Bot add card callback: user_id=%d, word=%s", user.id, word)
+
+        try:
+            result = await self._flashcards.add_word_with_deck_selection(
+                profile,
+                word,
+                translation,
+            )
+
+            if result.error:
+                await callback.answer(f"Ошибка: {result.error}", show_alert=True)
+                return
+
+            # Get deck info to show in confirmation
+            if result.card:
+                deck_info = ""
+                try:
+                    decks = await self._flashcards.list_user_decks(profile)
+                    # Find which deck the card was added to
+                    # We need to get the deck from the result somehow
+                    # For now, just show success message
+                    deck_info = ""
+                except Exception:
+                    pass
+
+                success_message = (
+                    f"✅ Карточка добавлена в колоду!\n"
+                    f"{result.card.source_text} — {result.card.target_text}"
+                )
+                await callback.answer(success_message)
+
+                # Update the message to remove the button
+                msg = callback.message
+                if msg and isinstance(msg, Message):
+                    try:
+                        await msg.edit_reply_markup(reply_markup=None)
+                    except Exception:
+                        pass  # Ignore if we can't edit the message
+            else:
+                await callback.answer("Карточка добавлена!", show_alert=False)
+
+        except Exception:
+            logger.exception("Bot add card callback failed: user_id=%d", user.id)
+            await callback.answer("Не удалось добавить карточку.", show_alert=True)
 
     async def _handle_create_deck_command(self, message: Message) -> None:
         """Process the /create_deck command for creating a new deck."""
@@ -424,6 +538,7 @@ class TelegramBotRunner:
             return
 
         message_text = message.text or ""
+        profile = self._to_profile(user)
 
         logger.info(
             "Bot message received: user_id=%d, username=%s, message_length=%d",
@@ -432,6 +547,35 @@ class TelegramBotRunner:
             len(message_text),
         )
 
+        # Check if message is a single word (for auto-translation)
+        stripped_text = message_text.strip()
+        if self._is_single_word(stripped_text):
+            logger.info("Bot auto-translating single word: user_id=%d, word=%s", user.id, stripped_text)
+            try:
+                result = await self._flashcards.translate_word(profile, stripped_text)
+                elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+                logger.info(
+                    "Bot auto-translation processed: user_id=%d, duration_ms=%.2f",
+                    user.id,
+                    elapsed_ms,
+                )
+
+                # Format translation result
+                response = self._format_translation_result(result)
+
+                # Add button if word is not in user's decks
+                keyboard = None
+                if not result.already_in_decks:
+                    keyboard = self._add_card_keyboard(stripped_text, result.card_content.target_text)
+
+                await self._safe_reply(message, response, reply_markup=keyboard)
+                return
+            except Exception:
+                # If translation fails, fall back to conversation handler
+                logger.info("Bot auto-translation failed, falling back to conversation: user_id=%d", user.id)
+
+        # Default conversation handler
         payload = UserMessagePayload(
             user_id=user.id,
             username=user.username,
@@ -640,3 +784,66 @@ class TelegramBotRunner:
         if card.card.part_of_speech:
             lines.insert(3, f"Часть речи: {card.card.part_of_speech}")
         return "\n".join(lines)
+
+    @staticmethod
+    def _format_translation_result(result: TranslationResult) -> str:
+        """Format translation result for display."""
+        content = result.card_content
+        lines = [
+            f"<b>Слово:</b> {content.source_text}",
+            f"<b>Перевод:</b> {content.target_text}",
+        ]
+
+        if content.part_of_speech:
+            lines.append(f"<b>Часть речи:</b> {content.part_of_speech}")
+
+        lines.extend([
+            "",
+            "<b>Пример:</b>",
+            content.example_sentence,
+            "",
+            "<b>Перевод примера:</b>",
+            content.example_translation,
+        ])
+
+        if result.already_in_decks:
+            lines.append("\n<i>Это слово уже есть в ваших колодах.</i>")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _add_card_keyboard(word: str, translation: str):
+        """Inline keyboard with button to add card to deck."""
+        builder = InlineKeyboardBuilder()
+        # Encode word and translation in callback data
+        # Format: addcard:word:translation
+        builder.button(
+            text="➕ Добавить в карточки",
+            callback_data=f"{_ADD_CARD_CALLBACK_PREFIX}:{word}:{translation}",
+        )
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def _is_single_word(text: str) -> bool:
+        """Check if the text is a single word suitable for translation."""
+        # Remove leading/trailing whitespace
+        stripped = text.strip()
+
+        # Empty text is not a single word
+        if not stripped:
+            return False
+
+        # Check if it contains spaces (multi-word)
+        if ' ' in stripped:
+            return False
+
+        # Check if it's too long to be a single word (likely a sentence)
+        if len(stripped) > 50:
+            return False
+
+        # Check if it contains sentence-ending punctuation
+        if any(char in stripped for char in '.!?'):
+            return False
+
+        return True

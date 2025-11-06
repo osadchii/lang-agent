@@ -11,7 +11,10 @@
       "Bash(source .venv/bin/activate)",
       "Bash(git mv:*)",
       "Bash(cat:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(poetry run pytest:*)",
+      "Bash(pip3 install:*)",
+      "Bash(.venv/bin/python -m pytest apps/backend/tests/ -v)"
     ],
     "deny": [],
     "ask": []

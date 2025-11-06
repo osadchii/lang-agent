@@ -504,3 +504,27 @@ class FlashcardRepository:
         stmt = select(DeckRecord.id).where(DeckRecord.owner_id == owner_id, DeckRecord.slug == slug)
         result = await session.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def check_word_exists_in_user_decks(
+        self,
+        session: AsyncSession,
+        *,
+        user_id: int,
+        normalized_text: str,
+    ) -> bool:
+        """Return True if the word exists in any of the user's decks."""
+        # Check both source and target normalized texts
+        stmt = (
+            select(UserCardRecord.id)
+            .join(CardRecord, UserCardRecord.card_id == CardRecord.id)
+            .where(
+                UserCardRecord.user_id == user_id,
+                (
+                    (CardRecord.normalized_source_text == normalized_text)
+                    | (CardRecord.normalized_target_text == normalized_text)
+                ),
+            )
+            .limit(1)
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none() is not None

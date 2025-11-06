@@ -97,6 +97,14 @@ class DeckCard:
     last_reviewed_at: dt.datetime | None
 
 
+@dataclass(frozen=True)
+class TranslationResult:
+    """Result of translating a word without adding it to a deck."""
+
+    card_content: FlashcardContent
+    already_in_decks: bool
+
+
 class FlashcardService:
     """Coordinate flashcard creation, scheduling, and retrieval."""
 
@@ -659,6 +667,112 @@ class FlashcardService:
         if deck is None:
             raise ValueError("Колода не найдена.")
         return deck
+
+    async def translate_word(
+        self,
+        profile: UserProfile,
+        word: str,
+    ) -> TranslationResult:
+        """Translate a word and check if it exists in user's decks."""
+        cleaned_word = word.strip()
+        if not cleaned_word:
+            raise ValueError("Слово не может быть пустым.")
+
+        # Generate translation using LLM
+        card_content = await self._generator.generate_flashcard(prompt_word=cleaned_word)
+
+        # Check if word exists in user's decks
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            normalized = self._flashcards.normalize_text(cleaned_word)
+            exists = await self._flashcards.check_word_exists_in_user_decks(
+                session,
+                user_id=user.id,
+                normalized_text=normalized,
+            )
+
+        return TranslationResult(
+            card_content=card_content,
+            already_in_decks=exists,
+        )
+
+    async def select_best_deck_for_word(
+        self,
+        profile: UserProfile,
+        word: str,
+        translation: str,
+    ) -> int:
+        """Select the most appropriate deck for a word using LLM."""
+        # Get user's decks
+        decks = await self.list_user_decks(profile)
+
+        if not decks:
+            # Create default deck if user has no decks
+            async with self._database.session() as session:
+                user = await self._get_or_create_user(session, profile)
+                deck = await self._flashcards.ensure_deck(session, owner_id=user.id)
+                await session.commit()
+                return deck.id
+
+        if len(decks) == 1:
+            # Only one deck, use it
+            return decks[0].deck_id
+
+        # Build prompt for LLM to select best deck
+        decks_info = "\n".join([
+            f"- ID: {deck.deck_id}, Название: {deck.name}, Описание: {deck.description or 'нет описания'}"
+            for deck in decks
+        ])
+
+        selection_prompt = (
+            f"Ты помощник для организации колод карточек для изучения греческого языка.\n"
+            f"Слово для добавления: '{word}' (русский)\n"
+            f"Перевод: '{translation}' (греческий)\n\n"
+            f"Доступные колоды:\n{decks_info}\n\n"
+            f"Выбери наиболее подходящую колоду для этого слова на основе названия и описания колод.\n"
+            f"Верни ТОЛЬКО ID выбранной колоды в формате: DECK_ID=X, где X - это числовой ID.\n"
+            f"Например: DECK_ID=5\n"
+            f"Если не можешь определить подходящую колоду, верни ID первой колоды."
+        )
+
+        # Use LLM to select deck
+        response = await self._llm.generate_reply(user_message=selection_prompt)
+
+        # Parse deck ID from response
+        import re
+        match = re.search(r'DECK_ID=(\d+)', response)
+        if match:
+            selected_deck_id = int(match.group(1))
+            # Verify the deck exists in user's decks
+            if any(deck.deck_id == selected_deck_id for deck in decks):
+                return selected_deck_id
+
+        # Fallback to active deck or first deck
+        async with self._database.session() as session:
+            user = await self._get_or_create_user(session, profile)
+            if user.active_deck_id:
+                return user.active_deck_id
+
+        return decks[0].deck_id
+
+    async def add_word_with_deck_selection(
+        self,
+        profile: UserProfile,
+        word: str,
+        translation: str,
+    ) -> FlashcardCreationResult:
+        """Add a word to the best matching deck selected by LLM."""
+        deck_id = await self.select_best_deck_for_word(profile, word, translation)
+        results = await self.add_words(profile, [word], deck_id=deck_id)
+        return results[0] if results else FlashcardCreationResult(
+            input_text=word,
+            created_card=False,
+            linked_to_user=False,
+            card=None,
+            reused_existing_card=False,
+            user_card_id=None,
+            error="Не удалось добавить карточку.",
+        )
 
 
 def _to_flashcard_data(card) -> FlashcardData:

@@ -18,6 +18,8 @@ _MARKDOWN_STRONG_RE = re.compile(r"__(.+?)__")
 _MARKDOWN_ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 _MARKDOWN_EM_RE = re.compile(r"_(.+?)_")
 _MARKDOWN_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+_MARKDOWN_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
+_MARKDOWN_TABLE_RE = re.compile(r"^\|.+\|$", re.MULTILINE)
 _HTML_TAG_RE = re.compile(r"</?([a-zA-Z0-9]+)(?:\s[^>]*)?>")
 _ALLOWED_HTML_TAGS = {
     "a",
@@ -40,59 +42,97 @@ _ALLOWED_HTML_TAGS = {
 
 
 def _format_reply_to_html(raw_text: str) -> str:
-    """Convert lightweight Markdown-style formatting into Telegram-friendly HTML."""
+    """
+    Prepare LLM response for Telegram HTML mode.
+
+    The LLM is instructed to generate Telegram-compatible HTML directly.
+    This function provides fallback conversion for basic Markdown patterns
+    and removes unsupported elements if the LLM makes mistakes.
+    """
     stripped = raw_text.strip()
     if not stripped:
         return stripped
 
-    # If the model already returned only allowed HTML tags, keep it untouched.
+    # Check if response already uses proper HTML tags (and no Markdown)
     tag_names = {match.group(1).lower() for match in _HTML_TAG_RE.finditer(stripped)}
-    if tag_names and tag_names.issubset(_ALLOWED_HTML_TAGS):
+    has_markdown_markers = any([
+        '**' in stripped,
+        stripped.count('*') > len(tag_names) * 2,  # More asterisks than HTML tags
+        _MARKDOWN_HEADING_RE.search(stripped),
+        _MARKDOWN_TABLE_RE.search(stripped),
+    ])
+    if tag_names and tag_names.issubset(_ALLOWED_HTML_TAGS) and not has_markdown_markers:
+        # Response is already in proper format, return as-is
         return stripped
 
-    # Remove disallowed HTML tags while preserving the enclosed content.
+    # Fallback: sanitize and convert basic Markdown patterns
+
+    # Remove unsupported HTML tags (keep content)
     def _drop_disallowed_tags(match: re.Match[str]) -> str:
         tag = match.group(1).lower()
         return match.group(0) if tag in _ALLOWED_HTML_TAGS else ""
 
-    sanitized_source = _HTML_TAG_RE.sub(_drop_disallowed_tags, stripped)
+    text = _HTML_TAG_RE.sub(_drop_disallowed_tags, stripped)
 
-    code_block_snippets: list[str] = []
+    # Remove Markdown tables - convert to plain text
+    lines = text.splitlines()
+    filtered_lines = []
+    for line in lines:
+        if _MARKDOWN_TABLE_RE.match(line.strip()):
+            # Extract cell content from table row
+            cells = [cell.strip() for cell in line.split('|') if cell.strip() and cell.strip() not in ('---', '')]
+            if cells:
+                filtered_lines.append("  ".join(cells))
+        else:
+            filtered_lines.append(line)
+    text = "\n".join(filtered_lines)
 
-    def _store_code_block(match: re.Match[str]) -> str:
-        code_content = match.group(2) or ""
-        code_block_snippets.append(f"<pre><code>{html.escape(code_content.strip())}</code></pre>")
-        return f"[[CODE_BLOCK_{len(code_block_snippets) - 1}]]"
+    # Store code blocks before escaping (use unique marker that won't be escaped)
+    code_blocks: list[str] = []
+    def _store_code(match: re.Match[str]) -> str:
+        code_blocks.append(f"<pre><code>{html.escape(match.group(2) or '')}</code></pre>")
+        return f"\x00CODE{len(code_blocks) - 1}\x00"  # Use null bytes as markers
+    text = _MARKDOWN_CODE_BLOCK_RE.sub(_store_code, text)
 
-    without_code_blocks = _MARKDOWN_CODE_BLOCK_RE.sub(_store_code_block, sanitized_source)
+    # Store headings before escaping
+    headings: list[str] = []
+    def _store_heading(match: re.Match[str]) -> str:
+        headings.append(match.group(2).strip())
+        return f"\x00HEADING{len(headings) - 1}\x00"
+    text = _MARKDOWN_HEADING_RE.sub(_store_heading, text)
 
-    escaped = html.escape(without_code_blocks)
+    # Escape HTML special characters (null bytes pass through)
+    text = html.escape(text)
 
-    escaped = _MARKDOWN_INLINE_CODE_RE.sub(lambda m: f"<code>{m.group(1)}</code>", escaped)
-    escaped = _MARKDOWN_BOLD_RE.sub(lambda m: f"<b>{m.group(1)}</b>", escaped)
-    escaped = _MARKDOWN_STRONG_RE.sub(lambda m: f"<b>{m.group(1)}</b>", escaped)
-    escaped = _MARKDOWN_ITALIC_RE.sub(lambda m: f"<i>{m.group(1)}</i>", escaped)
-    escaped = _MARKDOWN_EM_RE.sub(lambda m: f"<i>{m.group(1)}</i>", escaped)
+    # Convert basic Markdown to HTML
+    text = _MARKDOWN_INLINE_CODE_RE.sub(lambda m: f"<code>{m.group(1)}</code>", text)
+    text = _MARKDOWN_BOLD_RE.sub(lambda m: f"<b>{m.group(1)}</b>", text)
+    text = _MARKDOWN_STRONG_RE.sub(lambda m: f"<b>{m.group(1)}</b>", text)
+    text = _MARKDOWN_ITALIC_RE.sub(lambda m: f"<i>{m.group(1)}</i>", text)
+    text = _MARKDOWN_EM_RE.sub(lambda m: f"<i>{m.group(1)}</i>", text)
 
-    lines = escaped.splitlines()
-    formatted_lines: list[str] = []
+    # Convert bullet lists
+    lines = text.splitlines()
+    formatted_lines = []
     for line in lines:
         stripped_line = line.lstrip()
         if stripped_line.startswith(("- ", "* ")):
-            if formatted_lines and formatted_lines[-1].strip() and not formatted_lines[-1].lstrip().startswith("•"):
-                formatted_lines.append("")
             bullet_text = stripped_line[2:].strip()
             formatted_lines.append(f"• {bullet_text}")
         else:
             formatted_lines.append(line)
+    text = "\n".join(formatted_lines)
 
-    converted_text = "\n".join(formatted_lines)
-    converted_text = re.sub(r"\n{3,}", "\n\n", converted_text)
+    # Restore code blocks and headings
+    for i, code in enumerate(code_blocks):
+        text = text.replace(f"\x00CODE{i}\x00", code)
+    for i, heading in enumerate(headings):
+        text = text.replace(f"\x00HEADING{i}\x00", f"<b>{heading}</b>")
 
-    for index, snippet in enumerate(code_block_snippets):
-        converted_text = converted_text.replace(f"[[CODE_BLOCK_{index}]]", snippet)
+    # Clean up excessive newlines
+    text = re.sub(r"\n{3,}", "\n\n", text)
 
-    return converted_text.strip()
+    return text.strip()
 
 
 @dataclass

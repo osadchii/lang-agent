@@ -14,7 +14,11 @@
       "Bash(git add:*)",
       "Bash(poetry run pytest:*)",
       "Bash(pip3 install:*)",
-      "Bash(.venv/bin/python -m pytest apps/backend/tests/ -v)"
+      "Bash(.venv/bin/python -m pytest apps/backend/tests/ -v)",
+      "Bash(../../.venv/bin/python -m pytest:*)",
+      "Bash(../../.venv/bin/python:*)",
+      "WebFetch(domain:core.telegram.org)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

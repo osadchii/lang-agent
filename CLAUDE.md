@@ -1,7 +1,7 @@
 # Claude Code Guidelines for Lang-Agent Project
 
 ## Language And Encoding
-- Keep all commit messages, code comments, documentation, and filenames in English; end-user content may include Russian or Greek text when intentional.
+- Keep all code comments, documentation, and filenames in English; end-user content may include Russian or Greek text when intentional.
 - Store and exchange text files in UTF-8; verify that any non-English literals render correctly in editors, git diffs, and application logs.
 - Localize user-facing strings via dedicated resource modules to ensure encoding control and future expansion to other languages.
 
@@ -17,14 +17,13 @@
 - Update `README.md`, `.env`, and `.env.example` with every change that affects setup, configuration, or usage; keep setup instructions reproducible end-to-end.
 - Record architectural decisions in concise ADRs whenever you introduce or revise significant behaviors; store ADRs under `docs/adr`.
 - Before implementing features, outline requirements, assumptions, and open questions; resolve ambiguities early to avoid rework.
-- Use feature branches named `feature/<short-description>` (or `fix/`, `docs/`, etc.) and craft conventional commits (`type(scope): summary`) to keep history searchable.
 - Coordinate cross-surface changes (backend ↔ frontend) by capturing shared contracts, release sequencing, and migration steps in ADRs or integration docs before merging.
 
 ## Tooling And Quality
 - Favor automated formatting, linting, and static analysis across all languages used in the project; treat warnings as build failures.
 - Use the Context7 MCP documentation tools (`resolve-library-id`, then `get-library-docs`) to pull external dependency documentation instead of ad-hoc web browsing.
 - Develop comprehensive automated tests for every utility, service, and module; aim for meaningful coverage rather than percentage targets.
-- Write unit and integration tests alongside new code; keep suites fast, deterministic, and execute them after every code change and before each commit.
+- Write unit and integration tests alongside new code; keep suites fast, deterministic, and execute them after every code change.
 - Mock or stub external integrations in tests whenever feasible to maintain reliability, speed, and isolation.
 - Verify the application launches successfully both locally (`python -m backend.cli`) and via Docker (`docker compose up`) after every change.
 - Ensure the frontend passes TypeScript builds (`npm run build`) and UI test suites prior to submitting changes.
@@ -39,7 +38,6 @@
 - Always use the TodoWrite tool to plan and track complex multi-step tasks.
 - Use the Task tool with subagent_type=Explore when investigating codebase structure or answering "how does X work" questions.
 - Prefer specialized tools (Read, Edit, Write, Glob, Grep) over bash commands for file operations.
-- When creating git commits, follow the conventional commit format and include co-authorship with Claude.
 - Run tests and builds after making code changes to verify nothing breaks.
 - Ask clarifying questions using AskUserQuestion when requirements are ambiguous.
 - Provide code references in the format `file_path:line_number` when discussing specific code locations.

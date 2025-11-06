@@ -8,7 +8,10 @@
       "Bash(alembic upgrade:*)",
       "Bash(poetry run alembic:*)",
       "Bash(python3:*)",
-      "Bash(source .venv/bin/activate)"
+      "Bash(source .venv/bin/activate)",
+      "Bash(git mv:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

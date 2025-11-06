@@ -13,23 +13,23 @@ depends_on = None
 
 def upgrade() -> None:
     """Add active_deck_id column to users table."""
-    op.add_column(
-        "users",
-        sa.Column("active_deck_id", sa.Integer(), nullable=True),
-    )
-    op.create_index("ix_users_active_deck_id", "users", ["active_deck_id"])
-    op.create_foreign_key(
-        "fk_users_active_deck_id_decks",
-        "users",
-        "decks",
-        ["active_deck_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
+    with op.batch_alter_table("users", schema=None) as batch_op:
+        batch_op.add_column(
+            sa.Column("active_deck_id", sa.Integer(), nullable=True)
+        )
+        batch_op.create_index("ix_users_active_deck_id", ["active_deck_id"])
+        batch_op.create_foreign_key(
+            "fk_users_active_deck_id_decks",
+            "decks",
+            ["active_deck_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
 
 
 def downgrade() -> None:
     """Remove active_deck_id from users table."""
-    op.drop_constraint("fk_users_active_deck_id_decks", "users", type_="foreignkey")
-    op.drop_index("ix_users_active_deck_id", table_name="users")
-    op.drop_column("users", "active_deck_id")
+    with op.batch_alter_table("users", schema=None) as batch_op:
+        batch_op.drop_constraint("fk_users_active_deck_id_decks", type_="foreignkey")
+        batch_op.drop_index("ix_users_active_deck_id")
+        batch_op.drop_column("active_deck_id")

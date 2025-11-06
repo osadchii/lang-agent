@@ -44,9 +44,13 @@ class UserRecord(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=lambda: dt.datetime.now(dt.timezone.utc))
 
     messages: Mapped[list["MessageRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    owned_decks: Mapped[list["DeckRecord"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
+    owned_decks: Mapped[list["DeckRecord"]] = relationship(
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        foreign_keys="DeckRecord.owner_id",
+    )
     flashcards: Mapped[list["UserCardRecord"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    active_deck: Mapped["DeckRecord | None"] = relationship(foreign_keys=[active_deck_id])
+    active_deck: Mapped["DeckRecord | None"] = relationship(foreign_keys=[active_deck_id], viewonly=True)
 
 
 class MessageRecord(Base):
@@ -88,7 +92,10 @@ class DeckRecord(Base):
         UniqueConstraint("owner_id", "slug", name="uq_decks_owner_slug"),
     )
 
-    owner: Mapped["UserRecord | None"] = relationship(back_populates="owned_decks")
+    owner: Mapped["UserRecord | None"] = relationship(
+        back_populates="owned_decks",
+        foreign_keys=[owner_id],
+    )
     user_cards: Mapped[list["UserCardRecord"]] = relationship(back_populates="deck", cascade="all, delete-orphan")
 
 

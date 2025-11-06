@@ -209,3 +209,149 @@ async def test_deck_crud_and_card_generation(tmp_path) -> None:
     assert decks_after_delete == []
 
     await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_active_deck_management(tmp_path) -> None:
+    """Setting and getting active deck should work correctly."""
+    database = Database(f"sqlite+aiosqlite:///{tmp_path/'flashcards-active.db'}")
+    await database.initialize()
+
+    generator = StubFlashcardGenerator()
+    llm_client = StubLLMClient()
+    service = FlashcardService(
+        database=database,
+        generator=generator,
+        llm=llm_client,
+        random_source=random.Random(4),
+    )
+
+    profile = UserProfile(user_id=100, username="deckuser", first_name="Deck", last_name="User")
+
+    # Initially no active deck
+    active = await service.get_active_deck(profile)
+    assert active is None
+
+    # Create two decks
+    deck1 = await service.create_deck(profile, name="Greek Basics")
+    deck2 = await service.create_deck(profile, name="Greek Advanced")
+
+    # Set deck1 as active
+    await service.set_active_deck(profile, deck_id=deck1.deck_id)
+    active = await service.get_active_deck(profile)
+    assert active is not None
+    assert active.deck_id == deck1.deck_id
+    assert active.name == "Greek Basics"
+
+    # Change to deck2
+    await service.set_active_deck(profile, deck_id=deck2.deck_id)
+    active = await service.get_active_deck(profile)
+    assert active is not None
+    assert active.deck_id == deck2.deck_id
+    assert active.name == "Greek Advanced"
+
+    # Delete active deck - should clear active_deck_id
+    await service.delete_deck(profile, deck_id=deck2.deck_id)
+    active = await service.get_active_deck(profile)
+    assert active is None
+
+    await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_add_words_uses_active_deck(tmp_path) -> None:
+    """Words should be added to the active deck when specified."""
+    database = Database(f"sqlite+aiosqlite:///{tmp_path/'flashcards-add-active.db'}")
+    await database.initialize()
+
+    generator = StubFlashcardGenerator()
+    llm_client = StubLLMClient()
+    service = FlashcardService(
+        database=database,
+        generator=generator,
+        llm=llm_client,
+        random_source=random.Random(5),
+    )
+
+    profile = UserProfile(user_id=101, username="learner2", first_name="Test", last_name="User")
+
+    # Create two decks
+    deck1 = await service.create_deck(profile, name="Travel Greek")
+    deck2 = await service.create_deck(profile, name="Business Greek")
+
+    # Set deck1 as active
+    await service.set_active_deck(profile, deck_id=deck1.deck_id)
+
+    # Add word without specifying deck_id - should use active deck
+    results = await service.add_words(profile, ["γεια"])
+    assert len(results) == 1
+    assert results[0].created_card is True
+
+    # Check word is in deck1
+    cards_deck1 = await service.list_deck_cards(profile, deck_id=deck1.deck_id)
+    cards_deck2 = await service.list_deck_cards(profile, deck_id=deck2.deck_id)
+    assert len(cards_deck1) == 1
+    assert len(cards_deck2) == 0
+    assert cards_deck1[0].card.source_text == "γεια"
+
+    # Change active deck to deck2
+    await service.set_active_deck(profile, deck_id=deck2.deck_id)
+
+    # Add another word - should go to deck2
+    results = await service.add_words(profile, ["καλημέρα"])
+    assert len(results) == 1
+
+    cards_deck1_after = await service.list_deck_cards(profile, deck_id=deck1.deck_id)
+    cards_deck2_after = await service.list_deck_cards(profile, deck_id=deck2.deck_id)
+    assert len(cards_deck1_after) == 1  # still only one
+    assert len(cards_deck2_after) == 1  # new word here
+    assert cards_deck2_after[0].card.source_text == "καλημέρα"
+
+    await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_get_next_card_uses_active_deck(tmp_path) -> None:
+    """get_next_card should return cards from the active deck."""
+    database = Database(f"sqlite+aiosqlite:///{tmp_path/'flashcards-next-active.db'}")
+    await database.initialize()
+
+    generator = StubFlashcardGenerator()
+    llm_client = StubLLMClient()
+    service = FlashcardService(
+        database=database,
+        generator=generator,
+        llm=llm_client,
+        random_source=random.Random(6),
+    )
+
+    profile = UserProfile(user_id=102, username="reviewer", first_name="Review", last_name="User")
+
+    # Create two decks with cards
+    deck1 = await service.create_deck(profile, name="Deck One")
+    deck2 = await service.create_deck(profile, name="Deck Two")
+
+    # Add words to deck1
+    await service.add_words(profile, ["γεια"], deck_id=deck1.deck_id)
+    # Add words to deck2
+    await service.add_words(profile, ["καλημέρα"], deck_id=deck2.deck_id)
+
+    # Set deck1 as active
+    await service.set_active_deck(profile, deck_id=deck1.deck_id)
+
+    # Get next card - should come from deck1
+    card = await service.get_next_card(user_id=profile.user_id)
+    assert card is not None
+    assert card.deck_id == deck1.deck_id
+    assert card.card.source_text == "γεια"
+
+    # Change active deck to deck2
+    await service.set_active_deck(profile, deck_id=deck2.deck_id)
+
+    # Get next card - should come from deck2
+    card = await service.get_next_card(user_id=profile.user_id)
+    assert card is not None
+    assert card.deck_id == deck2.deck_id
+    assert card.card.source_text == "καλημέρα"
+
+    await database.dispose()

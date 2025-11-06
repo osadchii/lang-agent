@@ -681,6 +681,11 @@ class FlashcardService:
         # Generate translation using LLM
         card_content = await self._generator.generate_flashcard(prompt_word=cleaned_word)
 
+        # Validate that LLM returned a valid translation
+        # If the card is empty, it means the word is not translatable (e.g., slang, typo)
+        if not card_content.target_text.strip():
+            raise ValueError(f"Не удалось перевести слово: {cleaned_word}")
+
         # Check if word exists in user's decks
         async with self._database.session() as session:
             user = await self._get_or_create_user(session, profile)

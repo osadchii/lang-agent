@@ -36,6 +36,9 @@ bot.db-journal
 # macOS metadata
 .DS_Store
 
+# Legacy configuration files (replaced by CLAUDE.md)
+.clinerules
+
 # Frontend build artifacts
 node_modules/
 apps/frontend/node_modules/

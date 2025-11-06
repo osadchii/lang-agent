@@ -6,7 +6,7 @@
 [![Python 3.11](https://img.shields.io/badge/python-3.11%2B-%233776AB)](https://www.python.org/downloads/release/python-3110/)
 [![Node 18](https://img.shields.io/badge/node-18.18%2B-%23339933)](https://nodejs.org/docs/latest-v18.x/api/)
 
-AI-assisted tooling for learning Greek. The repository hosts both the backend services (bot runtime, API) and the forthcoming Telegram mini app frontend. Development practices live in `AGENTS.md`.
+AI-assisted tooling for learning Greek. The repository hosts both the backend services (bot runtime, API) and the forthcoming Telegram mini app frontend. Development practices live in [`docs/architecture/agents.md`](docs/architecture/agents.md).
 
 ---
 
@@ -14,7 +14,7 @@ AI-assisted tooling for learning Greek. The repository hosts both the backend se
 - **Multi-surface**: Python backend (`apps/backend`) plus React/Vite frontend (`apps/frontend`).
 - **Automated delivery**: CI builds, tests, publishes Docker images, and deploys to Raspberry Pi via GitHub Actions.
 - **Infrastructure-aware**: Optional Traefik routing baked into `docker-compose.yml`; can be disabled for local testing.
-- **Documented process**: ADRs in `docs/adr`, engineering expectations in `AGENTS.md`.
+- **Documented process**: ADRs in `docs/adr`, engineering expectations in [`docs/architecture/agents.md`](docs/architecture/agents.md).
 - **Decks + training API**: FastAPI surface serving deck CRUD, AI-powered card generation, and spaced repetition review.
 
 ## Repository Map
@@ -108,8 +108,14 @@ GitHub Actions publishes multi-arch images on pushes to `main`:
 ## Testing
 - Backend: `pytest`.
 - Frontend: `npm run build` (ensures the TypeScript build succeeds). Add UI/unit coverage alongside new features.
+## Documentation
+- **[Project Documentation](docs/)** — comprehensive project documentation
+- **[Architecture Decisions](docs/adr/)** — architectural decision records
+- **[Development Guides](docs/guides/)** — setup and configuration guides
+- **[Claude Guidelines](CLAUDE.md)** — AI assistant development guidelines
+
 
 ## Development Standards
-- Follow the engineering practices in `AGENTS.md`.
+- Follow the engineering practices in [`docs/architecture/agents.md`](docs/architecture/agents.md).
 - Keep documentation and environment files in sync with any setup or runtime changes.
 - Coordinate frontend-backend integration work across `apps/frontend` and `apps/backend`, documenting shared contracts before implementation.
